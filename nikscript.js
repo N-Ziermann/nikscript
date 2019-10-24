@@ -1,11 +1,19 @@
-publiccode = '\nvar i = 0; var float = 2.9;\n var x = i + 20;\n i += 1;\nvar t = \"abc\";\nif (i==2){print(i*2)}' 
+	publiccode = '\nvar i = 0; var float = 2.9;\n var x = i + 20;\n i += 1;\nvar t = \"abc\";\nif (i==2){print(i*2);}'
+ 
+
+
+
+
+publiccode = "print(i+2;);"
+
 toks = lexer(publiccode)
+//print(toks)
 
-for(i=0;i<toks.length;i++){
-    print("["+ toks[i] +"]")
-}
-
-print(publiccode)
+tree = parser(toks,0,"code","END")
+console.log(tree[0])
+//print("t")
+//print(tree)
+//print(publiccode)
 
 function lexer(code){
     tokens=[]
@@ -15,7 +23,8 @@ function lexer(code){
     
     while (index<code.length-1){
         index +=1
-        c = code[index]		
+        c = code[index]
+		
         if (c == " " || c == "\n"){    
             continue
         }
@@ -34,21 +43,25 @@ function lexer(code){
             tokens.push(["operator",c])
         }
             
-        else if (c == "\""){			
+        else if (c == "\""){
+		
+	
             s = ""
             index +=1
-            c = code[index]		
+            c = code[index]
+		
             while (c != "\""){
                 s += c
                 index +=1
-                c = code[index]		
+                c = code[index]
+		
             }
             //print(s)
             tokens.push(["string",s])
         }	
         
         //else if (c == "(" || c== ")" || c == "[" || c=="]"|| c=="{"||c=="}"|| c==","){
-        else if(c.match(/[\(\)\{\}\[\],=]/)) {
+        else if(c.match(/[\<\>\(\)\{\}\[\],=]/)) {
             //print((c,""))
             tokens.push([c,""])
         }
@@ -56,11 +69,13 @@ function lexer(code){
         else if (c.match(/[0-9]/)){
             n = c
             index +=1
-            c = code[index]		
+            c = code[index]
+		
             while (c.match(/[0-9\.]/)){
                 n += c
                 index +=1
-                c = code[index]		
+                c = code[index]
+		
             }
             //print(n)
             tokens.push(["number",n])
@@ -70,16 +85,18 @@ function lexer(code){
         if (c.match(/[a-zA-Z]/)){
             term = c
             index +=1
-            c = code[index]		
+            c = code[index]
+		
             //while (c.match(/[^\s()[]{},]/)){
             while (c.match(/[a-zA-Z0-9_-]/)){
                 term += c
                 index +=1
-                c = code[index]		
+                c = code[index]
+		
             }
             //print(term)
             if (term=="if"||term=="else"||term=="for"||term=="while"){
-                tokens.push(["expression",term])
+                tokens.push(["statement",term])
             }
             else{
                 tokens.push(["name",term])
@@ -87,7 +104,70 @@ function lexer(code){
             index -= 1 //prevent loosing data
         }
         
-        //print(index)	
+        //print(index)
+	
     }
+    tokens.push(["END","END"])
     return tokens
-}
+	
+}
+
+function parser(tokens,index,type,returnsymbol){//recursive; in if statements etc the returnsymbol is "}"
+    var result = []
+    var token = tokens[index]
+    while (token[0] != returnsymbol){
+    	console.log(type)
+
+    	if (type == "operation" && token[0] == ")"){	//special case because 2 things end operations
+    		break
+    	}
+
+    	else if (tokens[index+1][0] == "operator" && type != "operation"){
+    		data = parser(tokens,index,"operation",";")
+    		result.push(["operation", data[0]])
+    		index = data[1]-1
+    	}
+
+    	else if (token[0] == "number" || token[0] == "string" || token[0] == "operator" || token[0]=="="){
+    		result.push(token)
+    	}
+    	
+    	else if(token[0] == "name"){
+    		if(token[1] == "var"){
+    			data = parser(tokens,index+1,"assignment",";")
+    			result.push(["assignment", data[0]])
+    			index = data[1]-1
+    		}
+    		
+    		else if (tokens[index+1][0] == "=" && type != "assignment"){
+    			if (tokens[index+2][0] == "="){
+    				//comparison
+    			}
+    			else{
+
+    				data = parser(tokens,index,"assignment",";")
+    				result.push(["assignment", data[0]])
+    				index = data[1]-1
+    			}
+    		}
+
+    		else if (tokens[index+1][0] == "("  && type != "call"){
+    			data = parser(tokens,index+1,"call",";")
+    			result.push(["call", [token[1], data[0]]])
+    			index = data[1]-1
+    		}
+    		
+    		else{
+    			result.push(token)
+    		}
+    	}
+
+
+    	index+=1
+    	token = tokens[index]
+    }
+    return [result, index]
+
+	
+}
+
