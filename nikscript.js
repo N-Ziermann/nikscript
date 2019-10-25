@@ -1,16 +1,15 @@
-	publiccode = '\nvar i = 0; var float = 2.9;\n var x = i + 20;\n i += 1;\nvar t = \"abc\";\nif (i==2){print(i*2);}'
+	publiccode = '\nvar i = 0; var float = 2.9;\n var x = i + 20;\n i += 1;\nvar t = \"abc\";\nfor (i==5){print(i*2);}'
  
 
 
 
 
-publiccode = "print(i+2;);"
-
+publiccode = "for (i=0<2){1+1;}"
 toks = lexer(publiccode)
 //print(toks)
 
 tree = parser(toks,0,"code","END")
-console.log(tree[0])
+print(tree[0])
 //print("t")
 //print(tree)
 //print(publiccode)
@@ -113,14 +112,36 @@ function lexer(code){
 }
 
 function parser(tokens,index,type,returnsymbol){//recursive; in if statements etc the returnsymbol is "}"
-    var result = []
+    // need to add < and >
+	   var result = []
     var token = tokens[index]
     while (token[0] != returnsymbol){
-    	console.log(type)
-
+		
+		  if (type == "assignment" && (token[0] == "<" || token[0] == ">")){ // temporary
+			    returnsymbol = ")"
+			    result.push(token)
+		  }
+		
+    	print(type)
+     print("token:"+token)
     	if (type == "operation" && token[0] == ")"){	//special case because 2 things end operations
     		break
     	}
+		
+		  else if (token[0] == "statement"){
+			   statement_type = token[1]
+				  print("state")
+				  cond = parser(tokens,index+1,"condition","{")
+				  ifTrue = parser(tokens, cond[1]+1, "ifTrue", "}")
+				  index = ifTrue[1] 
+				  ifFalse = []
+				  if (tokens[ifTrue[1]][1] == "else"){
+					  ifFalse = parser(tokens,ifTrue[1]+1,"ifFalse","}")
+					  index = ifFalse[1]
+				  }
+				  result.push(["statement",[statement_type,[["condition",cond[0]], ["ifTrue", ifTrue[0]], ["ifFalse",ifFalse[0]]]]])
+				
+			  } 
 
     	else if (tokens[index+1][0] == "operator" && type != "operation"){
     		data = parser(tokens,index,"operation",";")
@@ -139,9 +160,11 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
     			index = data[1]-1
     		}
     		
-    		else if (tokens[index+1][0] == "=" && type != "assignment"){
-    			if (tokens[index+2][0] == "="){
-    				//comparison
+    		else if (tokens[index+1][0] == "=" && type != "assignment" && type != "comparison"){
+    			if (tokens[index+2][0] == "=" && type != "comparison"){
+					  data = parser(tokens,index,"comparison",")")
+    				result.push(["comparison",data[0]])
+					  index = data[1]
     			}
     			else{
 
@@ -156,6 +179,8 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
     			result.push(["call", [token[1], data[0]]])
     			index = data[1]-1
     		}
+			
+			  
     		
     		else{
     			result.push(token)
