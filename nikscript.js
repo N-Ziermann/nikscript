@@ -1,3 +1,7 @@
+
+publiccode = '\nvar i = 0; var float = 2.9;\n var x = i + 20;\n i += 1;\nvar t = \"abc\";\nfor (i==5){print(i*2);}'
+
+
 function lexer(code){
     tokens=[]
     index = -1
@@ -100,7 +104,7 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
 			    break
 		}
 
-    	else if (type == "operation" && (token[0] == ")" || token[0] == "="|| token[0] == "<"|| token[0] == ">")){	//special case because multiple things end operations
+    	else if (type == "operation" && (token[0] == ")" || token[0] == "="|| token[0] == "<"|| token[0] == ">"|| token[0] == ",")){	//special case because multiple things end operations
     		break
     	}
 		
@@ -131,19 +135,36 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
     	}
     	
     	else if(token[0] == "name"){
+    		
     		if(token[1] == "var"){
     			data = parser(tokens,index+1,"assignment",";")
     			result.push(["assignment", data[0]])
     			index = data[1]-1
     		}
+
+    		else if(token[1] == "func"){
+    			var funcName = tokens[index+1][1]
+    			var inputVars = parser(tokens,index+3,"input","{")
+    			index = inputVars[1]
+    			var funcContent = parser(tokens,index+1,"input","}")
+    			index = funcContent[1]
+    			result.push(["function", [funcName, [["input", inputVars], ["content", funcContent]] ]])
+    			//data = parser(tokens,index+1,"assignment",";")
+    			//result.push(["assignment", data[0]])
+    			//index = data[1]-1
+    		}
     		
     		else if (tokens[index+1][0] == "=" && type != "assignment" && type != "comparison"){
     			
-    			if (tokens[index+2][0] == "=" && type != "comparison"){
-					
-					data = parser(tokens,index,"comparison",")")
-    				result.push(["comparison",data[0]])
-					index = data[1]
+    			if (tokens[index+2][0] == "="){
+					if (type == "condition"){
+						result.push(token)
+					}
+					else{
+						data = parser(tokens,index,"comparison",")")
+	    				result.push(["comparison",data[0]])
+						index = data[1]
+					}
     			}
 
     			else{
@@ -209,17 +230,40 @@ function interpreter(exprs){
 		else if (expr[0] == "call"){
 			
 			var content = expr[1]
+
+			if (content[0]+"()" in functions){ // functioncall for selvedefined function
+				var functionContent = functions[content[0]+"()"]
+				var argsNeeded = functionContent[0][1][0]
+				var argsGiven = content[1]
+
+				if (argsGiven.length == argsNeeded.length){ 
+					
+					for (var i = 0; i < argsGiven.length; i++){
+						vars[argsNeeded[i][1]] = interpreter([argsGiven[i]]) // save function input arguments as variables
+					}
+					returnValue = interpreter(functionContent[1][1][0])
+
+				}
+				
+				else{
+					console.log(argsNeeded)
+					console.log("given " + argsGiven)
+					console.log(content[0] + " takes " + argsNeeded.length + " arguments but " + argsGiven.length + " were given!")
+				}
+			}
 			
-			switch(content[0]){ //predefinded function?
-				case "print":
-					console.log(interpreter(content[1]))
-					break
-				
-				case "len":
-					return interpreter(content[1]).length
-				
-				default:
-					console.log("function \"" + content[0] + "\" undefined")
+			else{ //predefinded function?
+				switch(content[0]){ 
+					case "print":
+						console.log(interpreter(content[1]))
+						break
+					
+					case "len":
+						return interpreter(content[1]).length
+					
+					default:
+						console.log("function \"" + content[0] + "\" undefined")
+				}
 			}
 		}
 
@@ -228,7 +272,7 @@ function interpreter(exprs){
 			var content = expr[1]
 			var res = interpreter([content[0]])
 			
-			for (i=1;i<content.length;i+=2){
+			for (var i=1;i<content.length;i+=2){
 
 				switch(content[i][1]){
 					case "+":
@@ -294,6 +338,7 @@ function interpreter(exprs){
 		}
 
 		else if(expr[0] == "condition" || expr[0] == "comparison"){
+			
 			var content = expr[1]
 			switch(content[1][0]){ // type of comparison
 				case "=":
@@ -331,15 +376,53 @@ function interpreter(exprs){
 			return interpreter(expr[1])
 		}
 
+		else if(expr[0] == "function"){ // store defined function
+			var content = expr[1]
+			var functionname = content[0] + "()"
+			var functiondata = content[1]
+			
+			functions[functionname] = functiondata
+		}
+
 		index+=1
 	}
 }
 
+
+
 function interpret(code){
+	functions = {} // seperate from vars because it doesnt have a local scope
 	vars = {}
-	console.log(lexer(code))
+	//functionStack = [] local variables and return statements dont exist for now
+
 	console.log(parser(lexer(code),0,"code","END")[0])
 	interpreter(parser(lexer(code),0,"code","END")[0])
 }
 
-interpret("for(i=0<15+1){if(i%3==0){print(\"Fizz\");}else{if(i%5==0){print(\"Buzz\");}else{print(i);}}}")
+var FizzBuzz = "for(i=1<101){tmp = \"\";if(i%3==0){tmp = tmp + \"Fizz\";}if(i%5==0){tmp = tmp + \"Buzz\";}if(tmp==\"\"){tmp=i;}print(tmp);}"
+
+/* FIZZBUZZ
+func FizzBuzz(n){
+ 
+ for(i=1<n+1){
+  tmp = "";
+ 
+  if(i%3==0){
+   tmp = tmp + "Fizz";
+  }
+
+  if(i%5==0){
+   tmp = tmp + "Buzz";
+  }
+
+  if(tmp==""){
+   tmp=i;
+  }
+
+  print(tmp);
+
+ }
+}
+
+FizzBuzz(30);
+*/
