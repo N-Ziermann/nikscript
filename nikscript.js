@@ -1,7 +1,3 @@
-
-publiccode = '\nvar i = 0; var float = 2.9;\n var x = i + 20;\n i += 1;\nvar t = \"abc\";\nfor (i==5){print(i*2);}'
-
-
 function lexer(code){
     tokens=[]
     index = -1
@@ -207,9 +203,8 @@ function interpreter(exprs){
 	var index = 0
 	
 	while (index < exprs.length){
-		
+
 		var expr = exprs[index]
-		//console.log(expr)
 		if (expr[0] == "number"){
 			return parseFloat(expr[1])
 		}
@@ -219,12 +214,18 @@ function interpreter(exprs){
 		}
 
 		else if (expr[0] == "name"){
-			return vars[expr[1]]
+			if (functionStack.length==0)
+				return vars[expr[1]]
+			else
+				return functionStack[functionStack.length-1][1][expr[1]]
 		}
 
 		else if (expr[0] == "assignment"){
 			var c = interpreter([expr[1][2]])
-			vars[expr[1][0][1]] = c;
+			if (functionStack.length == 0)
+				vars[expr[1][0][1]] = c;
+			else
+				functionStack[functionStack.length-1][1][expr[1][0][1]] = c;
 		}
 		
 		else if (expr[0] == "call"){
@@ -232,16 +233,31 @@ function interpreter(exprs){
 			var content = expr[1]
 
 			if (content[0]+"()" in functions){ // functioncall for selvedefined function
+				
 				var functionContent = functions[content[0]+"()"]
 				var argsNeeded = functionContent[0][1][0]
 				var argsGiven = content[1]
 
 				if (argsGiven.length == argsNeeded.length){ 
-					
+					//console.log(functionStack)
+
+					var tempFunctionStack = [] // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
+
+					tempFunctionStack.push([content[0]+"()", {}])
+
 					for (var i = 0; i < argsGiven.length; i++){
-						vars[argsNeeded[i][1]] = interpreter([argsGiven[i]]) // save function input arguments as variables
+						tempFunctionStack[tempFunctionStack.length-1][1][argsNeeded[i][1]] = interpreter([argsGiven[i]]) // save function input arguments as variables
 					}
+
+
+					functionStack.push(tempFunctionStack[0])
+					
+
 					returnValue = interpreter(functionContent[1][1][0])
+
+					//console.log(functionStack[functionStack.length-1][1])
+					functionStack.pop()
+
 
 				}
 				
@@ -324,14 +340,28 @@ function interpreter(exprs){
 					var loopCode = expr[1][1][1][1]
 
 					if (condition[1][0] == "<"){
-						for (vars[loopVarExpr[1]]=startValue; vars[loopVarExpr[1]] < limit; vars[loopVarExpr[1]]++){
-							interpreter(loopCode)
+						if(functionStack.length == 0){ // not inside a function
+							for (vars[loopVarExpr[1]]=startValue; vars[loopVarExpr[1]] < limit; vars[loopVarExpr[1]]++){
+								interpreter(loopCode)
+							}
+						}
+						else{
+							for (functionStack[functionStack.length-1][1][loopVarExpr[1]]=startValue; functionStack[functionStack.length-1][1][loopVarExpr[1]] < limit; functionStack[functionStack.length-1][1][loopVarExpr[1]]++){
+								interpreter(loopCode)
+							}
 						}
 					}
 
 					else if (condition[1][0] == ">"){
-						for (vars[loopVarExpr[1]]=startValue; vars[loopVarExpr[1]] > limit; vars[loopVarExpr[1]]++){
-							interpreter(loopCode)
+						if(functionStack.length == 0){ // not inside a function
+							for (vars[loopVarExpr[1]]=startValue; vars[loopVarExpr[1]] > limit; vars[loopVarExpr[1]]++){
+								interpreter(loopCode)
+							}
+						}
+						else{
+							for (functionStack[functionStack.length-1][1][loopVarExpr[1]]=startValue; functionStack[functionStack.length-1][1][loopVarExpr[1]] > limit; functionStack[functionStack.length-1][1][loopVarExpr[1]]++){
+								interpreter(loopCode)
+							}
 						}
 					}
 			}
@@ -389,40 +419,13 @@ function interpreter(exprs){
 }
 
 
-
 function interpret(code){
 	functions = {} // seperate from vars because it doesnt have a local scope
 	vars = {}
-	//functionStack = [] local variables and return statements dont exist for now
+	functionStack = [] //local variables and return statements dont exist for now
 
 	console.log(parser(lexer(code),0,"code","END")[0])
 	interpreter(parser(lexer(code),0,"code","END")[0])
 }
 
 var FizzBuzz = "for(i=1<101){tmp = \"\";if(i%3==0){tmp = tmp + \"Fizz\";}if(i%5==0){tmp = tmp + \"Buzz\";}if(tmp==\"\"){tmp=i;}print(tmp);}"
-
-/* FIZZBUZZ
-func FizzBuzz(n){
- 
- for(i=1<n+1){
-  tmp = "";
- 
-  if(i%3==0){
-   tmp = tmp + "Fizz";
-  }
-
-  if(i%5==0){
-   tmp = tmp + "Buzz";
-  }
-
-  if(tmp==""){
-   tmp=i;
-  }
-
-  print(tmp);
-
- }
-}
-
-FizzBuzz(30);
-*/
