@@ -1,8 +1,8 @@
 function lexer(code){
     tokens=[]
     index = -1
-    // Sprache nutzen um Programmierlernspiel zu machen
-    
+
+    var lastTokenized = " "; // stores last accepted tokenvalue in case something (negative numbers) depend on it
     
     while (index<code.length-1){
         index +=1
@@ -13,12 +13,27 @@ function lexer(code){
         }
         
         else if (c == ";"){ 
-            //console.log("semi")
             tokens.push([c,""])
+        }
+
+        else if (c.match(/[0-9]/) || (c == "-" && code[index+1].match(/[0-9]/) && lastTokenized.match(/[\n (+-/*%=]/)) ){ // "||" necessary to prevent mixups between x-1 and print(-1)
+            n = c
+            index +=1
+            c = code[index]
+		
+            while (c.match(/[0-9\.]/)){
+                n += c
+                index +=1
+                c = code[index]
+            }
+            tokens.push(["number",n])
+            index -= 1 //prevent loosing data
+            lastTokenized = code[index]
         }
         
         else if (c == "+" || c== "-" || c == "/" || c=="*"|| c=="%"){
             tokens.push(["operator",c])
+            lastTokenized = c
         }
             
         else if (c == "\""){
@@ -34,30 +49,15 @@ function lexer(code){
                 c = code[index]
 		
             }
-            //console.log(s)
+
             tokens.push(["string",s])
+            lastTokenized = "string"
         }	
         
-        //else if (c == "(" || c== ")" || c == "[" || c=="]"|| c=="{"||c=="}"|| c==","){
         else if(c.match(/[\<\>\(\)\{\}\[\],=]/)) {
-            //console.log((c,""))
+
             tokens.push([c,""])
-        }
-        
-        else if (c.match(/[0-9]/)){
-            n = c
-            index +=1
-            c = code[index]
-		
-            while (c.match(/[0-9\.]/)){
-                n += c
-                index +=1
-                c = code[index]
-		
-            }
-            //console.log(n)
-            tokens.push(["number",n])
-            index -= 1 //prevent loosing data
+            lastTokenized = c
         }
         
         if (c.match(/[a-zA-Z]/)){
@@ -65,14 +65,13 @@ function lexer(code){
             index +=1
             c = code[index]
 		
-            //while (c.match(/[^\s()[]{},]/)){
-            while (c.match(/[a-zA-Z0-9_-]/)){
+            while (c.match(/[a-zA-Z0-9_]/)){
                 term += c
                 index +=1
                 c = code[index]
 		
             }
-            //console.log(term)
+
             if (term=="if"||term=="else"||term=="for"||term=="while"){
                 tokens.push(["statement",term])
             }
@@ -80,9 +79,9 @@ function lexer(code){
                 tokens.push(["name",term])
             }
             index -= 1 //prevent loosing data
+            lastTokenized = "name"
         }
-        
-        //console.log(index)
+
 	
     }
     tokens.push(["END","END"])
@@ -90,22 +89,21 @@ function lexer(code){
 	
 }
 
-function parser(tokens,index,type,returnsymbol){//recursive; in if statements etc the returnsymbol is "}"
-    // need to add < and >
+function parser(tokens,index,type,returnsymbol){
+
 	var result = []
     var token = tokens[index]
     while (token[0] != returnsymbol){
-		
-		if (type == "assignment" && (token[0] == "<" || token[0] == ">")){ // temporary
+
+		if (type == "assignment" && (token[0] == "<" || token[0] == ">")){ // special case used in for loops
 			    break
 		}
 
     	else if (type == "operation" && (token[0] == ")" || token[0] == "="|| token[0] == "<"|| token[0] == ">"|| token[0] == ",")){	//special case because multiple things end operations
     		break
     	}
-		
+	
 		else if (token[0] == "statement"){
-			//console.log(token)
 			var statement_type = token[1]
 			var cond = parser(tokens,index+2,"condition","{")
 			var ifTrue = parser(tokens, cond[1]+1, "ifTrue", "}")
@@ -116,7 +114,6 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
 			 	index = ifFalse[1]
 			}
 			result.push(["statement",[statement_type,[["condition",cond[0]], ["ifTrue", ifTrue[0]], ["ifFalse",ifFalse[0]]]]])	
-			//console.log(result)
 		} 
 
 
@@ -125,6 +122,16 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
     		result.push(["operation", data[0]])
     		index = data[1]-1
     	}
+
+    	
+    	else if (token[0] == "operator" && type != "operation"){ // for foo() + value 
+    		var operationStart = [result.pop()]
+    		var tmp = operationStart.concat([["operator","+"]])
+    		data = parser(tokens,index+1,"operation",";")
+    		result.push(["operation", tmp.concat(data[0])])
+    		index = data[1]-1
+    	}
+		
 
     	else if (token[0] == "number" || token[0] == "string" || token[0] == "operator" || token[0]=="="|| token[0]=="<"|| token[0]==">"){
     		result.push(token)
@@ -137,6 +144,12 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
     			result.push(["assignment", data[0]])
     			index = data[1]-1
     		}
+    		
+    		else if (token[1] == "return"){
+				data = parser(tokens,index+1,"assignment",";")
+				result.push(["return", data[0]])
+				index = data[1] - 1
+			}
 
     		else if(token[1] == "func"){
     			var funcName = tokens[index+1][1]
@@ -145,9 +158,6 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
     			var funcContent = parser(tokens,index+1,"input","}")
     			index = funcContent[1]
     			result.push(["function", [funcName, [["input", inputVars], ["content", funcContent]] ]])
-    			//data = parser(tokens,index+1,"assignment",";")
-    			//result.push(["assignment", data[0]])
-    			//index = data[1]-1
     		}
     		
     		else if (tokens[index+1][0] == "=" && type != "assignment" && type != "comparison"){
@@ -173,9 +183,9 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
 
     		else if (tokens[index+1][0] == "("){
     			
-    			data = parser(tokens,index+2,"call",";")
+    			data = parser(tokens,index+2,"call",")")
     			result.push(["call", [token[1], data[0]]])
-    			index = data[1]-1
+    			index = data[1] 
     		}
 		
     		else{
@@ -189,7 +199,6 @@ function parser(tokens,index,type,returnsymbol){//recursive; in if statements et
     		index = data[1]
     	}
 
-    	//console.log(type)
     	index+=1
     	token = tokens[index]
     }
@@ -205,6 +214,13 @@ function interpreter(exprs){
 	while (index < exprs.length){
 
 		var expr = exprs[index]
+		
+		if (functionStack.length > 0){
+			if (functionStack[functionStack.length-1][2] != undefined){
+				break
+			}
+		}
+		
 		if (expr[0] == "number"){
 			return parseFloat(expr[1])
 		}
@@ -239,31 +255,31 @@ function interpreter(exprs){
 				var argsGiven = content[1]
 
 				if (argsGiven.length == argsNeeded.length){ 
-					//console.log(functionStack)
 
 					var tempFunctionStack = [] // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
 
-					tempFunctionStack.push([content[0]+"()", {}])
+					tempFunctionStack.push([content[0]+"()", {}, undefined]) // undefined will be the returnvalue
 
 					for (var i = 0; i < argsGiven.length; i++){
 						tempFunctionStack[tempFunctionStack.length-1][1][argsNeeded[i][1]] = interpreter([argsGiven[i]]) // save function input arguments as variables
 					}
 
-
 					functionStack.push(tempFunctionStack[0])
 					
-
-					returnValue = interpreter(functionContent[1][1][0])
-
-					//console.log(functionStack[functionStack.length-1][1])
+					interpreter(functionContent[1][1][0])
+					
+					returnValue = functionStack[functionStack.length-1][2]
+					
 					functionStack.pop()
+					
+					if (returnValue != undefined)
+						return returnValue
+					
 
 
 				}
 				
 				else{
-					console.log(argsNeeded)
-					console.log("given " + argsGiven)
 					console.log(content[0] + " takes " + argsNeeded.length + " arguments but " + argsGiven.length + " were given!")
 				}
 			}
@@ -413,6 +429,11 @@ function interpreter(exprs){
 			
 			functions[functionname] = functiondata
 		}
+		
+		else if (expr[0] == "return"){
+			functionStack[functionStack.length-1][2] = interpreter(expr[1])
+			break
+		}
 
 		index+=1
 	}
@@ -423,9 +444,58 @@ function interpret(code){
 	functions = {} // seperate from vars because it doesnt have a local scope
 	vars = {}
 	functionStack = [] //local variables and return statements dont exist for now
-
-	console.log(parser(lexer(code),0,"code","END")[0])
 	interpreter(parser(lexer(code),0,"code","END")[0])
 }
 
 var FizzBuzz = "for(i=1<101){tmp = \"\";if(i%3==0){tmp = tmp + \"Fizz\";}if(i%5==0){tmp = tmp + \"Buzz\";}if(tmp==\"\"){tmp=i;}print(tmp);}"
+
+
+/* MATH
+
+print("-1*2--1 = " + (-1*2--1));
+
+*/
+
+
+/* RECURSION
+
+func fibonacci(n){
+ if (n == 0){
+  return 0;
+ }
+ if (n == 1){
+  return 1;
+ }
+ return fibonacci(n-1) + fibonacci(n-2);
+}
+
+print(fibonacci(5));
+
+*/
+
+
+/* FIZZBUZZ
+func FizzBuzz(n){
+ 
+ for(i=1<n+1){
+  tmp = "";
+ 
+  if(i%3==0){
+   tmp = tmp + "Fizz";
+  }
+
+  if(i%5==0){
+   tmp = tmp + "Buzz";
+  }
+
+  if(tmp==""){
+   tmp=i;
+  }
+
+  print(tmp);
+
+ }
+}
+
+FizzBuzz(30);
+*/
