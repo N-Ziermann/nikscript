@@ -316,6 +316,9 @@ function interpreter(exprs){
 					case "*":
 						res *= interpreter([content[i+1]])
 						break
+					case "/":
+						res /= interpreter([content[i+1]])
+						break
 					case "%":
 						res = res % interpreter([content[i+1]])
 						break
