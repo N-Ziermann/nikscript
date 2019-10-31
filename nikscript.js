@@ -15,6 +15,13 @@ function lexer(code){
         else if (c == ";"){ 
             tokens.push([c,""])
         }
+	    
+	else if (c == "#"){ //comments
+            while (c != "\n"){
+            	index +=1
+            	c = code[index]
+            }
+        }
 
         else if (c.match(/[0-9]/) || (c == "-" && code[index+1].match(/[0-9]/) && lastTokenized.match(/[\n (+-/*%=]/)) ){ // "||" necessary to prevent mixups between x-1 and print(-1)
             n = c
