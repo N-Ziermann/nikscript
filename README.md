@@ -18,7 +18,7 @@ And run the interpreter by executing the interpret function whilst giving the co
 
 var i = 0;
 
-## Comments
+### Comments
 
 #comment
 
