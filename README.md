@@ -67,4 +67,4 @@ Niklas Ziermann
 
 **© Niklas Ziermann** 
 
-**GNU GPLv3**
+**MIT License**
