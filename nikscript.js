@@ -380,12 +380,12 @@ function interpreter(exprs){
 
 					else if (condition[1][0] == ">"){
 						if(functionStack.length == 0){ // not inside a function
-							for (vars[loopVarExpr[1]]=startValue; vars[loopVarExpr[1]] > limit; vars[loopVarExpr[1]]++){
+							for (vars[loopVarExpr[1]]=startValue; vars[loopVarExpr[1]] > limit; vars[loopVarExpr[1]]--){
 								interpreter(loopCode)
 							}
 						}
 						else{
-							for (functionStack[functionStack.length-1][1][loopVarExpr[1]]=startValue; functionStack[functionStack.length-1][1][loopVarExpr[1]] > limit; functionStack[functionStack.length-1][1][loopVarExpr[1]]++){
+							for (functionStack[functionStack.length-1][1][loopVarExpr[1]]=startValue; functionStack[functionStack.length-1][1][loopVarExpr[1]] > limit; functionStack[functionStack.length-1][1][loopVarExpr[1]]--){
 								interpreter(loopCode)
 							}
 						}
