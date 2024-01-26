@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig",
+  "include": ["node_modules", "nikscript.test.ts"],
+  "compilerOptions": { "allowImportingTsExtensions": true, "noEmit": true }
+}
