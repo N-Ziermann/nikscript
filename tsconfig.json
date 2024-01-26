@@ -4,7 +4,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "es2015",
-    "outDir": "dist"
+    "outDir": "dist",
+    "strict": true
   },
   "include": ["./nikscript.ts"],
   "exclude": ["./nikscript.test.ts"]

@@ -1,11 +1,11 @@
 /**
  * todo:
+ * eslint
  * variable naming
  * split 3 steps into 3 files?
  * remove all any's and vars without types
  * use union types instead of string everywhere
  * no == or != always === and !==
- * no var
  * only let if required
  * create functions to make the code more selfexplainatory
  * no tuples (for example: a token should look like this: {type: TokenVariant, value: string})
@@ -49,15 +49,15 @@ type Token = {
   value: string;
 };
 
-let functions = {}; // seperate from vars because it doesnt have a local scope
-let vars = {};
-let functionStack = []; //local variables and return statements dont exist for now
+let functions: any = {}; // seperate from vars because it doesnt have a local scope
+let vars: any = {};
+let functionStack: any[] = []; //local variables and return statements dont exist for now
 
-function lexer(code) {
+function lexer(code: string) {
   let tokens = [];
   let index = -1;
 
-  var lastTokenized = ' '; // stores last accepted tokenvalue in case something (negative numbers) depend on it
+  let lastTokenized = ' '; // stores last accepted tokenvalue in case something (negative numbers) depend on it
 
   while (index < code.length - 1) {
     index += 1;
@@ -150,9 +150,9 @@ function parser(
   index: any,
   type: ExpressionVariant,
   returnsymbol: SpecialCharacter
-) {
-  var result = [];
-  var token = tokens[index];
+): any {
+  const result = [];
+  let token = tokens[index];
   while (token[0] != returnsymbol) {
     if (type == 'assignment' && (token[0] == '<' || token[0] == '>')) {
       // special case used in for loops
@@ -168,11 +168,11 @@ function parser(
       //special case because multiple things end operations
       break;
     } else if (token[0] == 'statement') {
-      var statement_type = token[1];
-      var cond = parser(tokens, index + 2, 'condition', '{');
-      var ifTrue = parser(tokens, cond[1] + 1, 'ifTrue', '}');
+      const statement_type = token[1];
+      const cond = parser(tokens, index + 2, 'condition', '{');
+      const ifTrue = parser(tokens, cond[1] + 1, 'ifTrue', '}');
       index = ifTrue[1];
-      var ifFalse = [];
+      let ifFalse = [];
       if (tokens[ifTrue[1] + 1][1] == 'else') {
         ifFalse = parser(tokens, ifTrue[1] + 2, 'ifFalse', '}');
         index = ifFalse[1];
@@ -194,8 +194,8 @@ function parser(
       index = data[1] - 1;
     } else if (token[0] == 'operator' && type != 'operation') {
       // for foo() + value
-      var operationStart = [result.pop()];
-      var tmp = operationStart.concat([['operator', '+']]);
+      const operationStart: any[] = [result.pop()];
+      const tmp = operationStart.concat([['operator', '+']]);
       let data = parser(tokens, index + 1, 'operation', ';');
       result.push(['operation', tmp.concat(data[0])]);
       index = data[1] - 1;
@@ -218,10 +218,10 @@ function parser(
         result.push(['return', data[0]]);
         index = data[1] - 1;
       } else if (token[1] == 'func') {
-        var funcName = tokens[index + 1][1];
-        var inputVars = parser(tokens, index + 3, 'input', '{');
+        const funcName = tokens[index + 1][1];
+        const inputVars = parser(tokens, index + 3, 'input', '{');
         index = inputVars[1];
-        var funcContent = parser(tokens, index + 1, 'input', '}');
+        const funcContent = parser(tokens, index + 1, 'input', '}');
         index = funcContent[1];
         result.push([
           'function',
@@ -270,11 +270,11 @@ function parser(
   return [result, index];
 }
 
-function interpreter(exprs) {
-  var index = 0;
+function interpreter(exprs: any): number | any {
+  let index = 0;
 
   while (index < exprs.length) {
-    var expr = exprs[index];
+    const expr = exprs[index];
 
     if (functionStack.length > 0) {
       if (functionStack[functionStack.length - 1][2] != undefined) {
@@ -290,25 +290,26 @@ function interpreter(exprs) {
       if (functionStack.length == 0) return vars[expr[1]];
       else return functionStack[functionStack.length - 1][1][expr[1]];
     } else if (expr[0] == 'assignment') {
-      var c = interpreter([expr[1][2]]);
+      const c = interpreter([expr[1][2]]);
       if (functionStack.length == 0) vars[expr[1][0][1]] = c;
       else functionStack[functionStack.length - 1][1][expr[1][0][1]] = c;
     } else if (expr[0] == 'call') {
-      var content = expr[1];
+      const content = expr[1];
 
       if (content[0] + '()' in functions) {
         // functioncall for selvedefined function
 
-        var functionContent = functions[content[0] + '()'];
-        var argsNeeded = functionContent[0][1][0];
-        var argsGiven = content[1];
+        const functionContent = functions[content[0] + '()'];
+        const argsNeeded = functionContent[0][1][0];
+        const argsGiven = content[1];
 
         if (argsGiven.length == argsNeeded.length) {
-          var tempFunctionStack = []; // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
+          const tempFunctionStack = []; // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
 
           tempFunctionStack.push([content[0] + '()', {}, undefined]); // undefined will be the returnvalue
 
-          for (var i = 0; i < argsGiven.length; i++) {
+          for (let i = 0; i < argsGiven.length; i++) {
+            // @ts-ignore TODO
             tempFunctionStack[tempFunctionStack.length - 1][1][
               argsNeeded[i][1]
             ] = interpreter([argsGiven[i]]); // save function input arguments as variables
@@ -348,10 +349,10 @@ function interpreter(exprs) {
         }
       }
     } else if (expr[0] == 'operation') {
-      var content = expr[1];
-      var res = interpreter([content[0]]);
+      const content = expr[1];
+      let res: number = interpreter([content[0]]);
 
-      for (var i = 1; i < content.length; i += 2) {
+      for (let i = 1; i < content.length; i += 2) {
         switch (content[i][1]) {
           case '+':
             res += interpreter([content[i + 1]]);
@@ -390,12 +391,12 @@ function interpreter(exprs) {
           }
 
         case 'for':
-          var condition = expr[1][1][0][1];
+          const condition = expr[1][1][0][1];
 
-          var loopVarExpr = condition[0][1][0];
-          var startValue = interpreter([condition[0][1][2]]);
-          var limit = interpreter([condition[2]]);
-          var loopCode = expr[1][1][1][1];
+          const loopVarExpr = condition[0][1][0];
+          const startValue = interpreter([condition[0][1][2]]);
+          const limit = interpreter([condition[2]]);
+          const loopCode = expr[1][1][1][1];
 
           if (condition[1][0] == '<') {
             if (functionStack.length == 0) {
@@ -442,7 +443,7 @@ function interpreter(exprs) {
           }
       }
     } else if (expr[0] == 'condition' || expr[0] == 'comparison') {
-      var content = expr[1];
+      const content = expr[1];
       switch (
         content[1][0] // type of comparison
       ) {
@@ -471,9 +472,9 @@ function interpreter(exprs) {
       return interpreter(expr[1]);
     } else if (expr[0] == 'function') {
       // store defined function
-      var content = expr[1];
-      var functionname = content[0] + '()';
-      var functiondata = content[1];
+      const content = expr[1];
+      const functionname = content[0] + '()';
+      const functiondata = content[1];
 
       functions[functionname] = functiondata;
     } else if (expr[0] == 'return') {
@@ -485,57 +486,6 @@ function interpreter(exprs) {
   }
 }
 
-export function interpret(code) {
+export function interpret(code: string) {
   interpreter(parser(lexer(code), 0, 'code', 'END')[0]);
 }
-
-var FizzBuzz =
-  'for(i=1<101){tmp = "";if(i%3==0){tmp = tmp + "Fizz";}if(i%5==0){tmp = tmp + "Buzz";}if(tmp==""){tmp=i;}print(tmp);}';
-
-/* MATH
-
-print("-1*2--1 = " + (-1*2--1));
-
-*/
-
-/* RECURSION
-
-func fibonacci(n){
- if (n == 0){
-  return 0;
- }
- if (n == 1){
-  return 1;
- }
- return fibonacci(n-1) + fibonacci(n-2);
-}
-
-print(fibonacci(5));
-
-*/
-
-/* FIZZBUZZ
-func FizzBuzz(n){
- 
- for(i=1<n+1){
-  tmp = "";
- 
-  if(i%3==0){
-   tmp = tmp + "Fizz";
-  }
-
-  if(i%5==0){
-   tmp = tmp + "Buzz";
-  }
-
-  if(tmp==""){
-   tmp=i;
-  }
-
-  print(tmp);
-
- }
-}
-
-FizzBuzz(30);
-*/
