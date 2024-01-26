@@ -3,7 +3,7 @@
  * eslint
  * variable naming
  * split 3 steps into 3 files?
- * remove all any's and vars without types
+ * remove all any's
  * use union types instead of string everywhere
  * no == or != always === and !==
  * only let if required
@@ -11,13 +11,25 @@
  * no tuples (for example: a token should look like this: {type: TokenVariant, value: string})
  */
 
+type SpecialCharacter =
+  | '<'
+  | '>'
+  | '('
+  | ')'
+  | '='
+  | ','
+  | '{'
+  | '}'
+  | ';'
+  | 'END';
+
 type TokenVariant =
+  | SpecialCharacter
   | 'number'
   | 'string'
   | 'operator'
   | 'statement'
   | 'name'
-  | 'char'
   | 'END';
 
 type ExpressionVariant =
@@ -32,29 +44,18 @@ type ExpressionVariant =
   | 'call'
   | 'comparison';
 
-type SpecialCharacter =
-  | '<'
-  | '>'
-  | '('
-  | ')'
-  | '='
-  | ','
-  | '{'
-  | '}'
-  | ';'
-  | 'END';
-
-type Token = {
-  type: TokenVariant;
-  value: string;
-};
+type Token = [TokenVariant, string];
 
 let functions: any = {}; // seperate from vars because it doesnt have a local scope
 let vars: any = {};
-let functionStack: any[] = []; //local variables and return statements dont exist for now
+let functionStack: {
+  functionName: string;
+  arguments: Record<string, any>;
+  returnValue: any;
+}[] = [];
 
 function lexer(code: string) {
-  let tokens = [];
+  let tokens: Token[] = [];
   let index = -1;
 
   let lastTokenized = ' '; // stores last accepted tokenvalue in case something (negative numbers) depend on it
@@ -117,7 +118,7 @@ function lexer(code: string) {
       tokens.push(['string', s]);
       lastTokenized = 'string';
     } else if (char.match(/[\<\>\(\)\{\}\[\],=]/)) {
-      tokens.push([char, '']);
+      tokens.push([char as SpecialCharacter, '']);
       lastTokenized = char;
     }
 
@@ -146,8 +147,8 @@ function lexer(code: string) {
 }
 
 function parser(
-  tokens: any,
-  index: any,
+  tokens: Token[],
+  index: number,
   type: ExpressionVariant,
   returnsymbol: SpecialCharacter
 ): any {
@@ -277,7 +278,7 @@ function interpreter(exprs: any): number | any {
     const expr = exprs[index];
 
     if (functionStack.length > 0) {
-      if (functionStack[functionStack.length - 1][2] != undefined) {
+      if (functionStack[functionStack.length - 1].returnValue != undefined) {
         break;
       }
     }
@@ -288,11 +289,11 @@ function interpreter(exprs: any): number | any {
       return expr[1];
     } else if (expr[0] == 'name') {
       if (functionStack.length == 0) return vars[expr[1]];
-      else return functionStack[functionStack.length - 1][1][expr[1]];
+      else return functionStack[functionStack.length - 1].arguments[expr[1]];
     } else if (expr[0] == 'assignment') {
       const c = interpreter([expr[1][2]]);
       if (functionStack.length == 0) vars[expr[1][0][1]] = c;
-      else functionStack[functionStack.length - 1][1][expr[1][0][1]] = c;
+      else functionStack[functionStack.length - 1].arguments[expr[1][0][1]] = c;
     } else if (expr[0] == 'call') {
       const content = expr[1];
 
@@ -304,27 +305,25 @@ function interpreter(exprs: any): number | any {
         const argsGiven = content[1];
 
         if (argsGiven.length == argsNeeded.length) {
-          const tempFunctionStack = []; // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
+          const tempFunctionStack: typeof functionStack = []; // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
 
-          tempFunctionStack.push([content[0] + '()', {}, undefined]); // undefined will be the returnvalue
+          tempFunctionStack.push({
+            functionName: content[0] + '()',
+            arguments: {},
+            returnValue: undefined,
+          });
 
           for (let i = 0; i < argsGiven.length; i++) {
-            // @ts-ignore TODO
-            tempFunctionStack[tempFunctionStack.length - 1][1][
+            tempFunctionStack[tempFunctionStack.length - 1].arguments[
               argsNeeded[i][1]
             ] = interpreter([argsGiven[i]]); // save function input arguments as variables
           }
-
           functionStack.push(tempFunctionStack[0]);
-
           interpreter(functionContent[1][1][0]);
-
-          let returnValue = functionStack[functionStack.length - 1][2];
-
-          functionStack.pop();
-
+          const returnValue = functionStack.pop()?.returnValue;
           if (returnValue != undefined) return returnValue;
         } else {
+          // TODO: use `${}`
           console.log(
             content[0] +
               ' takes ' +
@@ -410,11 +409,15 @@ function interpreter(exprs: any): number | any {
               }
             } else {
               for (
-                functionStack[functionStack.length - 1][1][loopVarExpr[1]] =
-                  startValue;
-                functionStack[functionStack.length - 1][1][loopVarExpr[1]] <
-                limit;
-                functionStack[functionStack.length - 1][1][loopVarExpr[1]]++
+                functionStack[functionStack.length - 1].arguments[
+                  loopVarExpr[1]
+                ] = startValue;
+                functionStack[functionStack.length - 1].arguments[
+                  loopVarExpr[1]
+                ] < limit;
+                functionStack[functionStack.length - 1].arguments[
+                  loopVarExpr[1]
+                ]++
               ) {
                 interpreter(loopCode);
               }
@@ -431,11 +434,15 @@ function interpreter(exprs: any): number | any {
               }
             } else {
               for (
-                functionStack[functionStack.length - 1][1][loopVarExpr[1]] =
-                  startValue;
-                functionStack[functionStack.length - 1][1][loopVarExpr[1]] >
-                limit;
-                functionStack[functionStack.length - 1][1][loopVarExpr[1]]--
+                functionStack[functionStack.length - 1].arguments[
+                  loopVarExpr[1]
+                ] = startValue;
+                functionStack[functionStack.length - 1].arguments[
+                  loopVarExpr[1]
+                ] > limit;
+                functionStack[functionStack.length - 1].arguments[
+                  loopVarExpr[1]
+                ]--
               ) {
                 interpreter(loopCode);
               }
@@ -478,7 +485,9 @@ function interpreter(exprs: any): number | any {
 
       functions[functionname] = functiondata;
     } else if (expr[0] == 'return') {
-      functionStack[functionStack.length - 1][2] = interpreter(expr[1]);
+      functionStack[functionStack.length - 1].returnValue = interpreter(
+        expr[1]
+      );
       break;
     }
 

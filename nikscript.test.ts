@@ -26,10 +26,26 @@ it('should print each value in a for loop', () => {
 });
 
 it('should print each fizzbuzz value from 1 to 100', () => {
-  const FizzBuzz =
+  const code =
     'for(i=1<101){tmp = "";if(i%3==0){tmp = tmp + "Fizz";}if(i%5==0){tmp = tmp + "Buzz";}if(tmp==""){tmp=i;}print(tmp);}';
-  interpret(FizzBuzz);
+  interpret(code);
   expect(logSpy?.mock.calls.map((args) => args[0])).toEqual(fizzbuzz(100));
+});
+
+it('should recursively calulate the fibonacci value at position x (5)', () => {
+  const code = `
+    func fibonacci(n){
+      if (n == 0){
+          return 0;
+      }
+      if (n == 1){
+          return 1;
+      }
+      return fibonacci(n-1) + fibonacci(n-2);
+    }
+    print(fibonacci(8));`;
+  interpret(code);
+  expect(logSpy?.mock.calls.map((args) => args[0])).toEqual([21]);
 });
 
 function fizzbuzz(maxValue: number) {
