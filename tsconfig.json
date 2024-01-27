@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "types": ["node", "jest"],
+    "types": ["./types.d.ts", "node", "jest"],
     "esModuleInterop": true,
     "skipLibCheck": true,
     "target": "es2015",

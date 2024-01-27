@@ -1,5 +1,8 @@
 /**
  * todo:
+ * find more elegant alternative to using "as number" everywhere (generics?)
+ * publish build result to npm (using gh actions)
+ * also allow running it using npx by passing the filename of the executable as a parameter
  * eslint
  * variable naming
  * split 3 steps into 3 files?
@@ -11,41 +14,6 @@
  * no tuples (for example: a token should look like this: {type: TokenVariant, value: string})
  */
 
-type SpecialCharacter =
-  | '<'
-  | '>'
-  | '('
-  | ')'
-  | '='
-  | ','
-  | '{'
-  | '}'
-  | ';'
-  | 'END';
-
-type TokenVariant =
-  | SpecialCharacter
-  | 'number'
-  | 'string'
-  | 'operator'
-  | 'statement'
-  | 'name'
-  | 'END';
-
-type ExpressionVariant =
-  | 'ifTrue'
-  | 'ifFalse'
-  | 'operation'
-  | 'code'
-  | 'assignment'
-  | 'condition'
-  | 'input'
-  | 'bracket'
-  | 'call'
-  | 'comparison';
-
-type Token = [TokenVariant, string];
-
 let functions: any = {}; // seperate from vars because it doesnt have a local scope
 let vars: any = {};
 let functionStack: {
@@ -54,11 +22,11 @@ let functionStack: {
   returnValue: any;
 }[] = [];
 
-function lexer(code: string) {
+function lexer(code: string): Token[] {
   let tokens: Token[] = [];
   let index = -1;
 
-  let lastTokenized = ' '; // stores last accepted tokenvalue in case something (negative numbers) depend on it
+  let lastTokenized = ' '; // stores last accepted tokenvalue in case something (like negative numbers) depend on it
 
   while (index < code.length - 1) {
     index += 1;
@@ -82,16 +50,16 @@ function lexer(code: string) {
         lastTokenized.match(/[\n (+-/*%=]/))
     ) {
       // "||" necessary to prevent mixups between x-1 and print(-1)
-      let n = char;
+      let numberAsString = char;
       index += 1;
       char = code[index];
 
       while (char.match(/[0-9\.]/)) {
-        n += char;
+        numberAsString += char;
         index += 1;
         char = code[index];
       }
-      tokens.push(['number', n]);
+      tokens.push(['number', numberAsString]);
       index -= 1; //prevent loosing data
       lastTokenized = code[index];
     } else if (
@@ -105,17 +73,17 @@ function lexer(code: string) {
       tokens.push(['operator', char]);
       lastTokenized = char;
     } else if (char == '"') {
-      let s = '';
+      let stringContent = '';
       index += 1;
       char = code[index];
 
       while (char != '"') {
-        s += char;
+        stringContent += char;
         index += 1;
         char = code[index];
       }
 
-      tokens.push(['string', s]);
+      tokens.push(['string', stringContent]);
       lastTokenized = 'string';
     } else if (char.match(/[\<\>\(\)\{\}\[\],=]/)) {
       tokens.push([char as SpecialCharacter, '']);
@@ -156,7 +124,7 @@ function parser(
   let token = tokens[index];
   while (token[0] != returnsymbol) {
     if (type == 'assignment' && (token[0] == '<' || token[0] == '>')) {
-      // special case used in for loops
+      // treat "<"" & ">" differently when in an assignment (happens in for loops)
       break;
     } else if (
       type == 'operation' &&
@@ -268,10 +236,13 @@ function parser(
     index += 1;
     token = tokens[index];
   }
+  // TODO: no tuples!
   return [result, index];
 }
 
-function interpreter(exprs: any): number | any {
+function interpreter(
+  exprs: any
+): any[] | number | string | boolean | undefined {
   let index = 0;
 
   while (index < exprs.length) {
@@ -341,7 +312,7 @@ function interpreter(exprs: any): number | any {
             break;
 
           case 'len':
-            return interpreter(content[1]).length;
+            return (interpreter(content[1]) as any[]).length;
 
           default:
             console.log('function "' + content[0] + '" undefined');
@@ -349,24 +320,24 @@ function interpreter(exprs: any): number | any {
       }
     } else if (expr[0] == 'operation') {
       const content = expr[1];
-      let res: number = interpreter([content[0]]);
+      let res = interpreter([content[0]]) as number;
 
       for (let i = 1; i < content.length; i += 2) {
         switch (content[i][1]) {
           case '+':
-            res += interpreter([content[i + 1]]);
+            res += interpreter([content[i + 1]]) as number;
             break;
           case '-':
-            res -= interpreter([content[i + 1]]);
+            res -= interpreter([content[i + 1]]) as number;
             break;
           case '*':
-            res *= interpreter([content[i + 1]]);
+            res *= interpreter([content[i + 1]]) as number;
             break;
           case '/':
-            res /= interpreter([content[i + 1]]);
+            res /= interpreter([content[i + 1]]) as number;
             break;
           case '%':
-            res = res % interpreter([content[i + 1]]);
+            res = res % (interpreter([content[i + 1]]) as number);
             break;
         }
       }
@@ -394,7 +365,7 @@ function interpreter(exprs: any): number | any {
 
           const loopVarExpr = condition[0][1][0];
           const startValue = interpreter([condition[0][1][2]]);
-          const limit = interpreter([condition[2]]);
+          const limit = interpreter([condition[2]]) as number;
           const loopCode = expr[1][1][1][1];
 
           if (condition[1][0] == '<') {
@@ -451,6 +422,7 @@ function interpreter(exprs: any): number | any {
       }
     } else if (expr[0] == 'condition' || expr[0] == 'comparison') {
       const content = expr[1];
+
       switch (
         content[1][0] // type of comparison
       ) {
@@ -462,14 +434,20 @@ function interpreter(exprs: any): number | any {
           }
 
         case '<':
-          if (interpreter([content[0]]) < interpreter([content[2]])) {
+          if (
+            (interpreter([content[0]]) as number) <
+            (interpreter([content[2]]) as number)
+          ) {
             return true;
           } else {
             return false;
           }
 
         case '>':
-          if (interpreter([content[0]]) > interpreter([content[2]])) {
+          if (
+            (interpreter([content[0]]) as number) >
+            (interpreter([content[2]]) as number)
+          ) {
             return true;
           } else {
             return false;
@@ -495,6 +473,10 @@ function interpreter(exprs: any): number | any {
   }
 }
 
-export function interpret(code: string) {
-  interpreter(parser(lexer(code), 0, 'code', 'END')[0]);
+export function interpret(code: string): void {
+  const tokens = lexer(code);
+  const expressions = parser(tokens, 0, 'code', 'END');
+  // TODO: use this to understand the structure again (and then change it to a more readable format)
+  // console.debug(JSON.stringify(expressions));
+  interpreter(expressions[0]);
 }

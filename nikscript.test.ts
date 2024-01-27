@@ -7,6 +7,12 @@ beforeEach(() => {
   logSpy = jest.spyOn(console, 'log');
 });
 
+it('should print a string', () => {
+  const code = 'print("1", "2");';
+  interpret(code);
+  expect(logSpy?.mock.calls.map((args) => args[0])).toEqual(['1']);
+});
+
 it('should print a computed value', () => {
   const code = 'print(3 + 8);';
   interpret(code);

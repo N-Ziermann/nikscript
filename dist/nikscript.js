@@ -1,22 +1,25 @@
 /**
  * todo:
+ * find more elegant alternative to using "as number" everywhere (generics?)
+ * publish build result to npm (using gh actions)
+ * also allow running it using npx by passing the filename of the executable as a parameter
+ * eslint
  * variable naming
  * split 3 steps into 3 files?
- * remove all any's and vars without types
+ * remove all any's
  * use union types instead of string everywhere
  * no == or != always === and !==
- * no var
  * only let if required
  * create functions to make the code more selfexplainatory
  * no tuples (for example: a token should look like this: {type: TokenVariant, value: string})
  */
 let functions = {}; // seperate from vars because it doesnt have a local scope
 let vars = {};
-let functionStack = []; //local variables and return statements dont exist for now
+let functionStack = [];
 function lexer(code) {
     let tokens = [];
     let index = -1;
-    var lastTokenized = ' '; // stores last accepted tokenvalue in case something (negative numbers) depend on it
+    let lastTokenized = ' '; // stores last accepted tokenvalue in case something (like negative numbers) depend on it
     while (index < code.length - 1) {
         index += 1;
         let char = code[index];
@@ -39,15 +42,15 @@ function lexer(code) {
                 code[index + 1].match(/[0-9]/) &&
                 lastTokenized.match(/[\n (+-/*%=]/))) {
             // "||" necessary to prevent mixups between x-1 and print(-1)
-            let n = char;
+            let numberAsString = char;
             index += 1;
             char = code[index];
             while (char.match(/[0-9\.]/)) {
-                n += char;
+                numberAsString += char;
                 index += 1;
                 char = code[index];
             }
-            tokens.push(['number', n]);
+            tokens.push(['number', numberAsString]);
             index -= 1; //prevent loosing data
             lastTokenized = code[index];
         }
@@ -61,15 +64,15 @@ function lexer(code) {
             lastTokenized = char;
         }
         else if (char == '"') {
-            let s = '';
+            let stringContent = '';
             index += 1;
             char = code[index];
             while (char != '"') {
-                s += char;
+                stringContent += char;
                 index += 1;
                 char = code[index];
             }
-            tokens.push(['string', s]);
+            tokens.push(['string', stringContent]);
             lastTokenized = 'string';
         }
         else if (char.match(/[\<\>\(\)\{\}\[\],=]/)) {
@@ -99,11 +102,11 @@ function lexer(code) {
     return tokens;
 }
 function parser(tokens, index, type, returnsymbol) {
-    var result = [];
-    var token = tokens[index];
+    const result = [];
+    let token = tokens[index];
     while (token[0] != returnsymbol) {
         if (type == 'assignment' && (token[0] == '<' || token[0] == '>')) {
-            // special case used in for loops
+            // treat "<"" & ">" differently when in an assignment (happens in for loops)
             break;
         }
         else if (type == 'operation' &&
@@ -116,11 +119,11 @@ function parser(tokens, index, type, returnsymbol) {
             break;
         }
         else if (token[0] == 'statement') {
-            var statement_type = token[1];
-            var cond = parser(tokens, index + 2, 'condition', '{');
-            var ifTrue = parser(tokens, cond[1] + 1, 'ifTrue', '}');
+            const statement_type = token[1];
+            const cond = parser(tokens, index + 2, 'condition', '{');
+            const ifTrue = parser(tokens, cond[1] + 1, 'ifTrue', '}');
             index = ifTrue[1];
-            var ifFalse = [];
+            let ifFalse = [];
             if (tokens[ifTrue[1] + 1][1] == 'else') {
                 ifFalse = parser(tokens, ifTrue[1] + 2, 'ifFalse', '}');
                 index = ifFalse[1];
@@ -144,8 +147,8 @@ function parser(tokens, index, type, returnsymbol) {
         }
         else if (token[0] == 'operator' && type != 'operation') {
             // for foo() + value
-            var operationStart = [result.pop()];
-            var tmp = operationStart.concat([['operator', '+']]);
+            const operationStart = [result.pop()];
+            const tmp = operationStart.concat([['operator', '+']]);
             let data = parser(tokens, index + 1, 'operation', ';');
             result.push(['operation', tmp.concat(data[0])]);
             index = data[1] - 1;
@@ -170,10 +173,10 @@ function parser(tokens, index, type, returnsymbol) {
                 index = data[1] - 1;
             }
             else if (token[1] == 'func') {
-                var funcName = tokens[index + 1][1];
-                var inputVars = parser(tokens, index + 3, 'input', '{');
+                const funcName = tokens[index + 1][1];
+                const inputVars = parser(tokens, index + 3, 'input', '{');
                 index = inputVars[1];
-                var funcContent = parser(tokens, index + 1, 'input', '}');
+                const funcContent = parser(tokens, index + 1, 'input', '}');
                 index = funcContent[1];
                 result.push([
                     'function',
@@ -222,14 +225,16 @@ function parser(tokens, index, type, returnsymbol) {
         index += 1;
         token = tokens[index];
     }
+    console.log([result, index]);
     return [result, index];
 }
 function interpreter(exprs) {
-    var index = 0;
+    var _a;
+    let index = 0;
     while (index < exprs.length) {
-        var expr = exprs[index];
+        const expr = exprs[index];
         if (functionStack.length > 0) {
-            if (functionStack[functionStack.length - 1][2] != undefined) {
+            if (functionStack[functionStack.length - 1].returnValue != undefined) {
                 break;
             }
         }
@@ -243,36 +248,40 @@ function interpreter(exprs) {
             if (functionStack.length == 0)
                 return vars[expr[1]];
             else
-                return functionStack[functionStack.length - 1][1][expr[1]];
+                return functionStack[functionStack.length - 1].arguments[expr[1]];
         }
         else if (expr[0] == 'assignment') {
-            var c = interpreter([expr[1][2]]);
+            const c = interpreter([expr[1][2]]);
             if (functionStack.length == 0)
                 vars[expr[1][0][1]] = c;
             else
-                functionStack[functionStack.length - 1][1][expr[1][0][1]] = c;
+                functionStack[functionStack.length - 1].arguments[expr[1][0][1]] = c;
         }
         else if (expr[0] == 'call') {
-            var content = expr[1];
+            const content = expr[1];
             if (content[0] + '()' in functions) {
                 // functioncall for selvedefined function
-                var functionContent = functions[content[0] + '()'];
-                var argsNeeded = functionContent[0][1][0];
-                var argsGiven = content[1];
+                const functionContent = functions[content[0] + '()'];
+                const argsNeeded = functionContent[0][1][0];
+                const argsGiven = content[1];
                 if (argsGiven.length == argsNeeded.length) {
-                    var tempFunctionStack = []; // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
-                    tempFunctionStack.push([content[0] + '()', {}, undefined]); // undefined will be the returnvalue
-                    for (var i = 0; i < argsGiven.length; i++) {
-                        tempFunctionStack[tempFunctionStack.length - 1][1][argsNeeded[i][1]] = interpreter([argsGiven[i]]); // save function input arguments as variables
+                    const tempFunctionStack = []; // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
+                    tempFunctionStack.push({
+                        functionName: content[0] + '()',
+                        arguments: {},
+                        returnValue: undefined,
+                    });
+                    for (let i = 0; i < argsGiven.length; i++) {
+                        tempFunctionStack[tempFunctionStack.length - 1].arguments[argsNeeded[i][1]] = interpreter([argsGiven[i]]); // save function input arguments as variables
                     }
                     functionStack.push(tempFunctionStack[0]);
                     interpreter(functionContent[1][1][0]);
-                    let returnValue = functionStack[functionStack.length - 1][2];
-                    functionStack.pop();
+                    const returnValue = (_a = functionStack.pop()) === null || _a === void 0 ? void 0 : _a.returnValue;
                     if (returnValue != undefined)
                         return returnValue;
                 }
                 else {
+                    // TODO: use `${}`
                     console.log(content[0] +
                         ' takes ' +
                         argsNeeded.length +
@@ -295,9 +304,9 @@ function interpreter(exprs) {
             }
         }
         else if (expr[0] == 'operation') {
-            var content = expr[1];
-            var res = interpreter([content[0]]);
-            for (var i = 1; i < content.length; i += 2) {
+            const content = expr[1];
+            let res = interpreter([content[0]]);
+            for (let i = 1; i < content.length; i += 2) {
                 switch (content[i][1]) {
                     case '+':
                         res += interpreter([content[i + 1]]);
@@ -336,11 +345,11 @@ function interpreter(exprs) {
                         interpreter(expr[1][1][1][1]);
                     }
                 case 'for':
-                    var condition = expr[1][1][0][1];
-                    var loopVarExpr = condition[0][1][0];
-                    var startValue = interpreter([condition[0][1][2]]);
-                    var limit = interpreter([condition[2]]);
-                    var loopCode = expr[1][1][1][1];
+                    const condition = expr[1][1][0][1];
+                    const loopVarExpr = condition[0][1][0];
+                    const startValue = interpreter([condition[0][1][2]]);
+                    const limit = interpreter([condition[2]]);
+                    const loopCode = expr[1][1][1][1];
                     if (condition[1][0] == '<') {
                         if (functionStack.length == 0) {
                             // not inside a function
@@ -349,9 +358,7 @@ function interpreter(exprs) {
                             }
                         }
                         else {
-                            for (functionStack[functionStack.length - 1][1][loopVarExpr[1]] =
-                                startValue; functionStack[functionStack.length - 1][1][loopVarExpr[1]] <
-                                limit; functionStack[functionStack.length - 1][1][loopVarExpr[1]]++) {
+                            for (functionStack[functionStack.length - 1].arguments[loopVarExpr[1]] = startValue; functionStack[functionStack.length - 1].arguments[loopVarExpr[1]] < limit; functionStack[functionStack.length - 1].arguments[loopVarExpr[1]]++) {
                                 interpreter(loopCode);
                             }
                         }
@@ -364,9 +371,7 @@ function interpreter(exprs) {
                             }
                         }
                         else {
-                            for (functionStack[functionStack.length - 1][1][loopVarExpr[1]] =
-                                startValue; functionStack[functionStack.length - 1][1][loopVarExpr[1]] >
-                                limit; functionStack[functionStack.length - 1][1][loopVarExpr[1]]--) {
+                            for (functionStack[functionStack.length - 1].arguments[loopVarExpr[1]] = startValue; functionStack[functionStack.length - 1].arguments[loopVarExpr[1]] > limit; functionStack[functionStack.length - 1].arguments[loopVarExpr[1]]--) {
                                 interpreter(loopCode);
                             }
                         }
@@ -374,7 +379,7 @@ function interpreter(exprs) {
             }
         }
         else if (expr[0] == 'condition' || expr[0] == 'comparison') {
-            var content = expr[1];
+            const content = expr[1];
             switch (content[1][0] // type of comparison
             ) {
                 case '=':
@@ -385,14 +390,16 @@ function interpreter(exprs) {
                         return false;
                     }
                 case '<':
-                    if (interpreter([content[0]]) < interpreter([content[2]])) {
+                    if (interpreter([content[0]]) <
+                        interpreter([content[2]])) {
                         return true;
                     }
                     else {
                         return false;
                     }
                 case '>':
-                    if (interpreter([content[0]]) > interpreter([content[2]])) {
+                    if (interpreter([content[0]]) >
+                        interpreter([content[2]])) {
                         return true;
                     }
                     else {
@@ -405,13 +412,13 @@ function interpreter(exprs) {
         }
         else if (expr[0] == 'function') {
             // store defined function
-            var content = expr[1];
-            var functionname = content[0] + '()';
-            var functiondata = content[1];
+            const content = expr[1];
+            const functionname = content[0] + '()';
+            const functiondata = content[1];
             functions[functionname] = functiondata;
         }
         else if (expr[0] == 'return') {
-            functionStack[functionStack.length - 1][2] = interpreter(expr[1]);
+            functionStack[functionStack.length - 1].returnValue = interpreter(expr[1]);
             break;
         }
         index += 1;
@@ -420,49 +427,3 @@ function interpreter(exprs) {
 export function interpret(code) {
     interpreter(parser(lexer(code), 0, 'code', 'END')[0]);
 }
-var FizzBuzz = 'for(i=1<101){tmp = "";if(i%3==0){tmp = tmp + "Fizz";}if(i%5==0){tmp = tmp + "Buzz";}if(tmp==""){tmp=i;}print(tmp);}';
-/* MATH
-
-print("-1*2--1 = " + (-1*2--1));
-
-*/
-/* RECURSION
-
-func fibonacci(n){
- if (n == 0){
-  return 0;
- }
- if (n == 1){
-  return 1;
- }
- return fibonacci(n-1) + fibonacci(n-2);
-}
-
-print(fibonacci(5));
-
-*/
-/* FIZZBUZZ
-func FizzBuzz(n){
- 
- for(i=1<n+1){
-  tmp = "";
- 
-  if(i%3==0){
-   tmp = tmp + "Fizz";
-  }
-
-  if(i%5==0){
-   tmp = tmp + "Buzz";
-  }
-
-  if(tmp==""){
-   tmp=i;
-  }
-
-  print(tmp);
-
- }
-}
-
-FizzBuzz(30);
-*/
