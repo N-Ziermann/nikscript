@@ -148,7 +148,7 @@ function interpreter(
         // functioncall for selvedefined function
 
         const functionContent = functions[content[0] + '()'];
-        const argsNeeded = functionContent[0][1][0];
+        const argsNeeded = functionContent[0][1].result;
         const argsGiven = content[1];
 
         if (argsGiven.length == argsNeeded.length) {
@@ -166,7 +166,7 @@ function interpreter(
             ] = interpreter([argsGiven[i]]); // save function input arguments as variables
           }
           functionStack.push(tempFunctionStack[0]);
-          interpreter(functionContent[1][1][0]);
+          interpreter(functionContent[1][1].result);
           const returnValue = functionStack.pop()?.returnValue;
           if (returnValue != undefined) return returnValue;
         } else {
@@ -354,5 +354,5 @@ export function interpret(code: string): void {
   const expressions = parser(tokens, 0, 'code', 'END');
   // TODO: use this to understand the structure again (and then change it to a more readable format)
   // console.debug(JSON.stringify(expressions));
-  interpreter(expressions[0]);
+  interpreter(expressions.result);
 }

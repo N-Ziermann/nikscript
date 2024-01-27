@@ -3,7 +3,7 @@ export function parser(
   index: number,
   type: ExpressionVariant,
   returnsymbol: SpecialCharacter
-): any {
+): { result: any[]; index: number } {
   const result = [];
   let token = tokens[index];
   while (token[0] != returnsymbol) {
@@ -14,35 +14,35 @@ export function parser(
     } else if (token[0] == 'statement') {
       const statement_type = token[1];
       const cond = parser(tokens, index + 2, 'condition', '{');
-      const ifTrue = parser(tokens, cond[1] + 1, 'ifTrue', '}');
-      index = ifTrue[1];
-      let ifFalse = [];
-      if (tokens[ifTrue[1] + 1][1] == 'else') {
-        ifFalse = parser(tokens, ifTrue[1] + 2, 'ifFalse', '}');
-        index = ifFalse[1];
+      const ifTrue = parser(tokens, cond.index + 1, 'ifTrue', '}');
+      index = ifTrue.index;
+      let ifFalse: ReturnType<typeof parser> | undefined = undefined;
+      if (tokens[ifTrue.index + 1][1] == 'else') {
+        ifFalse = parser(tokens, ifTrue.index + 2, 'ifFalse', '}');
+        index = ifFalse.index;
       }
       result.push([
         'statement',
         [
           statement_type,
           [
-            ['condition', cond[0]],
-            ['ifTrue', ifTrue[0]],
-            ['ifFalse', ifFalse[0]],
+            ['condition', cond.result],
+            ['ifTrue', ifTrue.result],
+            ['ifFalse', ifFalse?.result],
           ],
         ],
       ]);
     } else if (tokens[index + 1][0] == 'operator' && type != 'operation') {
       let data = parser(tokens, index, 'operation', ';');
-      result.push(['operation', data[0]]);
-      index = data[1] - 1;
+      result.push(['operation', data.result]);
+      index = data.index - 1;
     } else if (token[0] == 'operator' && type != 'operation') {
       // for foo() + value
       const operationStart: any[] = [result.pop()];
       const tmp = operationStart.concat([['operator', '+']]);
       let data = parser(tokens, index + 1, 'operation', ';');
-      result.push(['operation', tmp.concat(data[0])]);
-      index = data[1] - 1;
+      result.push(['operation', tmp.concat(data.result)]);
+      index = data.index - 1;
     } else if (
       token[0] == 'number' ||
       token[0] == 'string' ||
@@ -55,18 +55,18 @@ export function parser(
     } else if (token[0] == 'name') {
       if (token[1] == 'var') {
         let data = parser(tokens, index + 1, 'assignment', ';');
-        result.push(['assignment', data[0]]);
-        index = data[1] - 1;
+        result.push(['assignment', data.result]);
+        index = data.index - 1;
       } else if (token[1] == 'return') {
         let data = parser(tokens, index + 1, 'assignment', ';');
-        result.push(['return', data[0]]);
-        index = data[1] - 1;
+        result.push(['return', data.result]);
+        index = data.index - 1;
       } else if (token[1] == 'func') {
         const funcName = tokens[index + 1][1];
         const inputVars = parser(tokens, index + 3, 'input', '{');
-        index = inputVars[1];
+        index = inputVars.index;
         const funcContent = parser(tokens, index + 1, 'input', '}');
-        index = funcContent[1];
+        index = funcContent.index;
         result.push([
           'function',
           [
@@ -87,32 +87,31 @@ export function parser(
             result.push(token);
           } else {
             let data = parser(tokens, index, 'comparison', ')');
-            result.push(['comparison', data[0]]);
-            index = data[1];
+            result.push(['comparison', data.result]);
+            index = data.index;
           }
         } else {
           let data = parser(tokens, index, 'assignment', ';');
-          result.push(['assignment', data[0]]);
-          index = data[1] - 1;
+          result.push(['assignment', data.result]);
+          index = data.index - 1;
         }
       } else if (tokens[index + 1][0] == '(') {
         let data = parser(tokens, index + 2, 'call', ')');
-        result.push(['call', [token[1], data[0]]]);
-        index = data[1];
+        result.push(['call', [token[1], data.result]]);
+        index = data.index;
       } else {
         result.push(token);
       }
     } else if (token[0] == '(') {
       let data = parser(tokens, index + 1, 'bracket', ')');
-      result.push(['bracket', data[0]]);
-      index = data[1];
+      result.push(['bracket', data.result]);
+      index = data.index;
     }
 
     index += 1;
     token = tokens[index];
   }
-  // TODO: no tuples!
-  return [result, index];
+  return { result, index };
 }
 
 function isEndOfOperation(type: ExpressionVariant, token: Token): boolean {
