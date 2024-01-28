@@ -1,3 +1,5 @@
+type Expression = { type: ExpressionVariant | TokenVariant; content: any };
+
 type SpecialCharacter =
   | '<'
   | '>'
@@ -29,6 +31,8 @@ type ExpressionVariant =
   | 'input'
   | 'bracket'
   | 'call'
-  | 'comparison';
+  | 'comparison'
+  | 'return'
+  | 'function';
 
 type Token = [TokenVariant, string];

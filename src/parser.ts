@@ -3,8 +3,8 @@ export function parser(
   index: number,
   type: ExpressionVariant,
   returnsymbol: SpecialCharacter
-): { result: any[]; index: number } {
-  const result = [];
+): { result: Expression[]; index: number } {
+  const result: Expression[] = [];
   let token = tokens[index];
   while (token[0] != returnsymbol) {
     if (isForLoopComparison(type, token)) {
@@ -21,9 +21,9 @@ export function parser(
         ifFalse = parser(tokens, ifTrue.index + 2, 'ifFalse', '}');
         index = ifFalse.index;
       }
-      result.push([
-        'statement',
-        [
+      result.push({
+        type: 'statement',
+        content: [
           statement_type,
           [
             ['condition', cond.result],
@@ -31,17 +31,17 @@ export function parser(
             ['ifFalse', ifFalse?.result],
           ],
         ],
-      ]);
+      });
     } else if (tokens[index + 1][0] == 'operator' && type != 'operation') {
       let data = parser(tokens, index, 'operation', ';');
-      result.push(['operation', data.result]);
+      result.push({ type: 'operation', content: data.result });
       index = data.index - 1;
     } else if (token[0] == 'operator' && type != 'operation') {
       // for foo() + value
-      const operationStart: any[] = [result.pop()];
-      const tmp = operationStart.concat([['operator', '+']]);
+      const operationStart: Expression[] = [result.pop()!];
+      const tmp = operationStart.concat({ type: 'operation', content: '+' });
       let data = parser(tokens, index + 1, 'operation', ';');
-      result.push(['operation', tmp.concat(data.result)]);
+      result.push({ type: 'operation', content: tmp.concat(data.result) });
       index = data.index - 1;
     } else if (
       token[0] == 'number' ||
@@ -51,15 +51,15 @@ export function parser(
       token[0] == '<' ||
       token[0] == '>'
     ) {
-      result.push(token);
+      result.push({ type: token[0], content: token[1] });
     } else if (token[0] == 'name') {
       if (token[1] == 'var') {
         let data = parser(tokens, index + 1, 'assignment', ';');
-        result.push(['assignment', data.result]);
+        result.push({ type: 'assignment', content: data.result });
         index = data.index - 1;
       } else if (token[1] == 'return') {
         let data = parser(tokens, index + 1, 'assignment', ';');
-        result.push(['return', data.result]);
+        result.push({ type: 'return', content: data.result });
         index = data.index - 1;
       } else if (token[1] == 'func') {
         const funcName = tokens[index + 1][1];
@@ -67,16 +67,16 @@ export function parser(
         index = inputVars.index;
         const funcContent = parser(tokens, index + 1, 'input', '}');
         index = funcContent.index;
-        result.push([
-          'function',
-          [
+        result.push({
+          type: 'function',
+          content: [
             funcName,
             [
               ['input', inputVars],
               ['content', funcContent],
             ],
           ],
-        ]);
+        });
       } else if (
         tokens[index + 1][0] == '=' &&
         type != 'assignment' &&
@@ -84,27 +84,27 @@ export function parser(
       ) {
         if (tokens[index + 2][0] == '=') {
           if (type == 'condition') {
-            result.push(token);
+            result.push({ type: token[0], content: token[1] });
           } else {
             let data = parser(tokens, index, 'comparison', ')');
-            result.push(['comparison', data.result]);
+            result.push({ type: 'comparison', content: data.result });
             index = data.index;
           }
         } else {
           let data = parser(tokens, index, 'assignment', ';');
-          result.push(['assignment', data.result]);
+          result.push({ type: 'assignment', content: data.result });
           index = data.index - 1;
         }
       } else if (tokens[index + 1][0] == '(') {
         let data = parser(tokens, index + 2, 'call', ')');
-        result.push(['call', [token[1], data.result]]);
+        result.push({ type: 'call', content: [token[1], data.result] });
         index = data.index;
       } else {
-        result.push(token);
+        result.push({ type: token[0], content: token[1] });
       }
     } else if (token[0] == '(') {
       let data = parser(tokens, index + 1, 'bracket', ')');
-      result.push(['bracket', data.result]);
+      result.push({ type: 'bracket', content: data.result });
       index = data.index;
     }
 

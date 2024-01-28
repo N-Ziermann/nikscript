@@ -117,12 +117,12 @@ function lexer(code: string): Token[] {
 }
 
 function interpreter(
-  exprs: any
+  expressions: Expression[]
 ): any[] | number | string | boolean | undefined {
   let index = 0;
 
-  while (index < exprs.length) {
-    const expr = exprs[index];
+  while (index < expressions.length) {
+    const expr = expressions[index];
 
     if (functionStack.length > 0) {
       if (functionStack[functionStack.length - 1].returnValue != undefined) {
@@ -130,26 +130,32 @@ function interpreter(
       }
     }
 
-    if (expr[0] == 'number') {
-      return parseFloat(expr[1]);
-    } else if (expr[0] == 'string') {
-      return expr[1];
-    } else if (expr[0] == 'name') {
-      if (functionStack.length == 0) return vars[expr[1]];
-      else return functionStack[functionStack.length - 1].arguments[expr[1]];
-    } else if (expr[0] == 'assignment') {
-      const c = interpreter([expr[1][2]]);
-      if (functionStack.length == 0) vars[expr[1][0][1]] = c;
-      else functionStack[functionStack.length - 1].arguments[expr[1][0][1]] = c;
-    } else if (expr[0] == 'call') {
-      const content = expr[1];
+    if (expr.type == 'number') {
+      return parseFloat(expr.content);
+    } else if (expr.type == 'string') {
+      return expr.content;
+    } else if (expr.type == 'name') {
+      if (functionStack.length == 0) return vars[expr.content];
+      else
+        return functionStack[functionStack.length - 1].arguments[expr.content];
+    } else if (expr.type == 'assignment') {
+      const valueToAssign = interpreter([expr.content[2]]);
+      if (functionStack.length == 0) {
+        vars[expr.content[0].content] = valueToAssign;
+      } else {
+        functionStack[functionStack.length - 1].arguments[
+          expr.content[0].content
+        ] = valueToAssign;
+      }
+    } else if (expr.type == 'call') {
+      const content = expr.content;
 
       if (content[0] + '()' in functions) {
         // functioncall for selvedefined function
 
         const functionContent = functions[content[0] + '()'];
-        const argsNeeded = functionContent[0][1].result;
-        const argsGiven = content[1];
+        const argsNeeded = functionContent[0][1].result as Expression[];
+        const argsGiven = content[1] as Expression[];
 
         if (argsGiven.length == argsNeeded.length) {
           const tempFunctionStack: typeof functionStack = []; // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
@@ -162,7 +168,7 @@ function interpreter(
 
           for (let i = 0; i < argsGiven.length; i++) {
             tempFunctionStack[tempFunctionStack.length - 1].arguments[
-              argsNeeded[i][1]
+              argsNeeded[i].content
             ] = interpreter([argsGiven[i]]); // save function input arguments as variables
           }
           functionStack.push(tempFunctionStack[0]);
@@ -191,104 +197,112 @@ function interpreter(
             return (interpreter(content[1]) as any[]).length;
 
           default:
-            console.log('function "' + content[0] + '" undefined');
+            console.log('function "' + content[0] + '" is undefined');
         }
       }
-    } else if (expr[0] == 'operation') {
-      const content = expr[1];
-      let res = interpreter([content[0]]) as number;
+    } else if (expr.type == 'operation') {
+      const content = expr.content as Expression[];
+      let resultValue = interpreter([content[0]]) as number;
 
+      // TODO: in this case the + operator is in the "old" notation (["operator", "+"])
       for (let i = 1; i < content.length; i += 2) {
-        switch (content[i][1]) {
+        switch (content[i].content) {
           case '+':
-            res += interpreter([content[i + 1]]) as number;
+            resultValue += interpreter([content[i + 1]]) as number;
             break;
           case '-':
-            res -= interpreter([content[i + 1]]) as number;
+            resultValue -= interpreter([content[i + 1]]) as number;
             break;
           case '*':
-            res *= interpreter([content[i + 1]]) as number;
+            resultValue *= interpreter([content[i + 1]]) as number;
             break;
           case '/':
-            res /= interpreter([content[i + 1]]) as number;
+            resultValue /= interpreter([content[i + 1]]) as number;
             break;
           case '%':
-            res = res % (interpreter([content[i + 1]]) as number);
+            resultValue =
+              resultValue % (interpreter([content[i + 1]]) as number);
             break;
         }
       }
-      return res;
-    } else if (expr[0] == 'statement') {
-      switch (expr[1][0]) {
+      return resultValue;
+    } else if (expr.type == 'statement') {
+      switch (expr.content[0]) {
         case 'if':
-          if (interpreter([expr[1][1][0]])) {
-            // condition
-            interpreter(expr[1][1][1][1]); // ifTrue
+          if (
+            interpreter([
+              { type: 'comparison', content: expr.content[1][0][1] },
+            ])
+          ) {
+            interpreter(expr.content[1][1][1]); // ifTrue
           } else {
-            if (expr[1][1][2][1] != undefined) {
-              interpreter(expr[1][1][2][1]); // ifFalse
+            if (expr.content[1][2][1] != undefined) {
+              interpreter(expr.content[1][2][1]); // ifFalse
             }
           }
           break;
 
         case 'while':
-          while (interpreter([expr[1][1][0]])) {
-            interpreter(expr[1][1][1][1]);
+          while (
+            interpreter([
+              { type: 'comparison', content: expr.content[1][0][1] },
+            ])
+          ) {
+            interpreter(expr.content[1][1][1]);
           }
 
         case 'for':
-          const condition = expr[1][1][0][1];
-
-          const loopVarExpr = condition[0][1][0];
-          const startValue = interpreter([condition[0][1][2]]);
+          const condition = expr.content[1][0][1] as Expression[];
+          const loopVarExpr = condition[0].content[0] as Expression;
+          const startValue = interpreter([condition[0].content[2]]);
           const limit = interpreter([condition[2]]) as number;
-          const loopCode = expr[1][1][1][1];
+          const loopCode = expr.content[1][1][1];
 
-          if (condition[1][0] == '<') {
+          if (condition[1].type == '<') {
             if (functionStack.length == 0) {
               // not inside a function
               for (
-                vars[loopVarExpr[1]] = startValue;
-                vars[loopVarExpr[1]] < limit;
-                vars[loopVarExpr[1]]++
+                vars[loopVarExpr.content] = startValue;
+                vars[loopVarExpr.content] < limit;
+                vars[loopVarExpr.content]++
               ) {
                 interpreter(loopCode);
               }
             } else {
               for (
                 functionStack[functionStack.length - 1].arguments[
-                  loopVarExpr[1]
+                  loopVarExpr.content
                 ] = startValue;
                 functionStack[functionStack.length - 1].arguments[
-                  loopVarExpr[1]
+                  loopVarExpr.content
                 ] < limit;
                 functionStack[functionStack.length - 1].arguments[
-                  loopVarExpr[1]
+                  loopVarExpr.content
                 ]++
               ) {
                 interpreter(loopCode);
               }
             }
-          } else if (condition[1][0] == '>') {
+          } else if (condition[1].type == '>') {
             if (functionStack.length == 0) {
               // not inside a function
               for (
-                vars[loopVarExpr[1]] = startValue;
-                vars[loopVarExpr[1]] > limit;
-                vars[loopVarExpr[1]]--
+                vars[loopVarExpr.content] = startValue;
+                vars[loopVarExpr.content] > limit;
+                vars[loopVarExpr.content] -= 1
               ) {
                 interpreter(loopCode);
               }
             } else {
               for (
                 functionStack[functionStack.length - 1].arguments[
-                  loopVarExpr[1]
+                  loopVarExpr.content
                 ] = startValue;
                 functionStack[functionStack.length - 1].arguments[
-                  loopVarExpr[1]
+                  loopVarExpr.content
                 ] > limit;
                 functionStack[functionStack.length - 1].arguments[
-                  loopVarExpr[1]
+                  loopVarExpr.content
                 ]--
               ) {
                 interpreter(loopCode);
@@ -296,11 +310,11 @@ function interpreter(
             }
           }
       }
-    } else if (expr[0] == 'condition' || expr[0] == 'comparison') {
-      const content = expr[1];
+    } else if (expr.type == 'condition' || expr.type == 'comparison') {
+      const content = expr.content as Expression[];
 
       switch (
-        content[1][0] // type of comparison
+        content[1].type // type of comparison
       ) {
         case '=':
           if (interpreter([content[0]]) == interpreter([content[3]])) {
@@ -329,18 +343,18 @@ function interpreter(
             return false;
           }
       }
-    } else if (expr[0] == 'bracket') {
-      return interpreter(expr[1]);
-    } else if (expr[0] == 'function') {
+    } else if (expr.type == 'bracket') {
+      return interpreter(expr.content);
+    } else if (expr.type == 'function') {
       // store defined function
-      const content = expr[1];
+      const content = expr.content;
       const functionname = content[0] + '()';
       const functiondata = content[1];
 
       functions[functionname] = functiondata;
-    } else if (expr[0] == 'return') {
+    } else if (expr.type == 'return') {
       functionStack[functionStack.length - 1].returnValue = interpreter(
-        expr[1]
+        expr.content
       );
       break;
     }
@@ -352,7 +366,5 @@ function interpreter(
 export function interpret(code: string): void {
   const tokens = lexer(code);
   const expressions = parser(tokens, 0, 'code', 'END');
-  // TODO: use this to understand the structure again (and then change it to a more readable format)
-  // console.debug(JSON.stringify(expressions));
   interpreter(expressions.result);
 }
