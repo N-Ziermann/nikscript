@@ -8,7 +8,6 @@
  * split 3 steps into 3 files?
  * remove all any's
  * use union types instead of string everywhere
- * no == or != always === and !==
  * only let if required
  * create functions to make the code more selfexplainatory
  * no tuples (for example: a token should look like this: {type: TokenVariant, value: string})
@@ -34,20 +33,20 @@ function lexer(code: string): Token[] {
     index += 1;
     let char = code[index];
 
-    if (char == ' ' || char == '\n') {
+    if (char === ' ' || char === '\n') {
       continue;
-    } else if (char == ';') {
+    } else if (char === ';') {
       // TODO: ["CHARACTER", char]
       tokens.push([char, '']);
-    } else if (char == '#') {
+    } else if (char === '#') {
       //comments
-      while (char != '\n') {
+      while (char !== '\n') {
         index += 1;
         char = code[index];
       }
     } else if (
       char.match(/[0-9]/) ||
-      (char == '-' &&
+      (char === '-' &&
         code[index + 1].match(/[0-9]/) &&
         lastTokenized.match(/[\n (+-/*%=]/))
     ) {
@@ -65,21 +64,21 @@ function lexer(code: string): Token[] {
       index -= 1; //prevent loosing data
       lastTokenized = code[index];
     } else if (
-      char == '+' ||
-      char == '-' ||
-      char == '/' ||
-      char == '*' ||
-      char == '%'
+      char === '+' ||
+      char === '-' ||
+      char === '/' ||
+      char === '*' ||
+      char === '%'
     ) {
       // TODO: operator etc should be union and UPPERCASE!
       tokens.push(['operator', char]);
       lastTokenized = char;
-    } else if (char == '"') {
+    } else if (char === '"') {
       let stringContent = '';
       index += 1;
       char = code[index];
 
-      while (char != '"') {
+      while (char !== '"') {
         stringContent += char;
         index += 1;
         char = code[index];
@@ -103,7 +102,12 @@ function lexer(code: string): Token[] {
         char = code[index];
       }
 
-      if (term == 'if' || term == 'else' || term == 'for' || term == 'while') {
+      if (
+        term === 'if' ||
+        term === 'else' ||
+        term === 'for' ||
+        term === 'while'
+      ) {
         tokens.push(['statement', term]);
       } else {
         tokens.push(['name', term]);
@@ -125,29 +129,29 @@ function interpreter(
     const expr = expressions[index];
 
     if (functionStack.length > 0) {
-      if (functionStack[functionStack.length - 1].returnValue != undefined) {
+      if (functionStack[functionStack.length - 1].returnValue !== undefined) {
         break;
       }
     }
 
-    if (expr.type == 'number') {
+    if (expr.type === 'number') {
       return parseFloat(expr.content);
-    } else if (expr.type == 'string') {
+    } else if (expr.type === 'string') {
       return expr.content;
-    } else if (expr.type == 'name') {
-      if (functionStack.length == 0) return vars[expr.content];
+    } else if (expr.type === 'name') {
+      if (functionStack.length === 0) return vars[expr.content];
       else
         return functionStack[functionStack.length - 1].arguments[expr.content];
-    } else if (expr.type == 'assignment') {
+    } else if (expr.type === 'assignment') {
       const valueToAssign = interpreter([expr.content[2]]);
-      if (functionStack.length == 0) {
+      if (functionStack.length === 0) {
         vars[expr.content[0].content] = valueToAssign;
       } else {
         functionStack[functionStack.length - 1].arguments[
           expr.content[0].content
         ] = valueToAssign;
       }
-    } else if (expr.type == 'call') {
+    } else if (expr.type === 'call') {
       const content = expr.content;
 
       if (content[0] + '()' in functions) {
@@ -157,7 +161,7 @@ function interpreter(
         const argsNeeded = functionContent[0][1].result as Expression[];
         const argsGiven = content[1] as Expression[];
 
-        if (argsGiven.length == argsNeeded.length) {
+        if (argsGiven.length === argsNeeded.length) {
           const tempFunctionStack: typeof functionStack = []; // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
 
           tempFunctionStack.push({
@@ -174,7 +178,7 @@ function interpreter(
           functionStack.push(tempFunctionStack[0]);
           interpreter(functionContent[1][1].result);
           const returnValue = functionStack.pop()?.returnValue;
-          if (returnValue != undefined) return returnValue;
+          if (returnValue !== undefined) return returnValue;
         } else {
           // TODO: use `${}`
           console.log(
@@ -200,11 +204,10 @@ function interpreter(
             console.log('function "' + content[0] + '" is undefined');
         }
       }
-    } else if (expr.type == 'operation') {
+    } else if (expr.type === 'operation') {
       const content = expr.content as Expression[];
       let resultValue = interpreter([content[0]]) as number;
 
-      // TODO: in this case the + operator is in the "old" notation (["operator", "+"])
       for (let i = 1; i < content.length; i += 2) {
         switch (content[i].content) {
           case '+':
@@ -226,7 +229,7 @@ function interpreter(
         }
       }
       return resultValue;
-    } else if (expr.type == 'statement') {
+    } else if (expr.type === 'statement') {
       switch (expr.content[0]) {
         case 'if':
           if (
@@ -236,7 +239,7 @@ function interpreter(
           ) {
             interpreter(expr.content[1][1][1]); // ifTrue
           } else {
-            if (expr.content[1][2][1] != undefined) {
+            if (expr.content[1][2][1] !== undefined) {
               interpreter(expr.content[1][2][1]); // ifFalse
             }
           }
@@ -258,8 +261,8 @@ function interpreter(
           const limit = interpreter([condition[2]]) as number;
           const loopCode = expr.content[1][1][1];
 
-          if (condition[1].type == '<') {
-            if (functionStack.length == 0) {
+          if (condition[1].type === '<') {
+            if (functionStack.length === 0) {
               // not inside a function
               for (
                 vars[loopVarExpr.content] = startValue;
@@ -283,8 +286,8 @@ function interpreter(
                 interpreter(loopCode);
               }
             }
-          } else if (condition[1].type == '>') {
-            if (functionStack.length == 0) {
+          } else if (condition[1].type === '>') {
+            if (functionStack.length === 0) {
               // not inside a function
               for (
                 vars[loopVarExpr.content] = startValue;
@@ -310,14 +313,14 @@ function interpreter(
             }
           }
       }
-    } else if (expr.type == 'condition' || expr.type == 'comparison') {
+    } else if (expr.type === 'condition' || expr.type === 'comparison') {
       const content = expr.content as Expression[];
 
       switch (
         content[1].type // type of comparison
       ) {
         case '=':
-          if (interpreter([content[0]]) == interpreter([content[3]])) {
+          if (interpreter([content[0]]) === interpreter([content[3]])) {
             return true;
           } else {
             return false;
@@ -343,16 +346,16 @@ function interpreter(
             return false;
           }
       }
-    } else if (expr.type == 'bracket') {
+    } else if (expr.type === 'bracket') {
       return interpreter(expr.content);
-    } else if (expr.type == 'function') {
+    } else if (expr.type === 'function') {
       // store defined function
       const content = expr.content;
       const functionname = content[0] + '()';
       const functiondata = content[1];
 
       functions[functionname] = functiondata;
-    } else if (expr.type == 'return') {
+    } else if (expr.type === 'return') {
       functionStack[functionStack.length - 1].returnValue = interpreter(
         expr.content
       );
