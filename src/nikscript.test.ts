@@ -13,6 +13,14 @@ it('should print a string', () => {
   expect(logSpy?.mock.calls.map((args) => args[0])).toEqual(['1']);
 });
 
+it('should ignore comments string', () => {
+  const code = `
+  # print("1", "2");
+  print(3);`;
+  interpret(code);
+  expect(logSpy?.mock.calls.map((args) => args[0])).toEqual([3]);
+});
+
 it('should print a computed value', () => {
   const code = 'print(3 + 8);';
   interpret(code);
