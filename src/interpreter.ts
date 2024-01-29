@@ -1,10 +1,10 @@
 let functions: Record<string, FunctionDescriptor> = {}; // uses seperate from vars because it doesnt have a local scope
-let vars: any = {};
 let functionStack: {
   functionName: string;
   arguments: Record<string, any>;
   returnValue: any;
 }[] = [];
+let vars: Record<string, ReturnType<typeof interpreter>> = {};
 
 export function interpreter(
   expressions: Expression[]
@@ -152,8 +152,8 @@ export function interpreter(
               // not inside a function
               for (
                 vars[loopVarExpr.content] = startValue;
-                vars[loopVarExpr.content] < limit;
-                vars[loopVarExpr.content]++
+                (vars[loopVarExpr.content] as any as number) < limit;
+                (vars[loopVarExpr.content] as any as number)++
               ) {
                 interpreter(loopCode);
               }
@@ -177,8 +177,8 @@ export function interpreter(
               // not inside a function
               for (
                 vars[loopVarExpr.content] = startValue;
-                vars[loopVarExpr.content] > limit;
-                vars[loopVarExpr.content] -= 1
+                (vars[loopVarExpr.content] as any as number) > limit;
+                (vars[loopVarExpr.content] as any as number) -= 1
               ) {
                 interpreter(loopCode);
               }
