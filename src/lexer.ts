@@ -12,7 +12,7 @@ export function lexer(code: string): Token[] {
       continue;
     } else if (char === ';') {
       // TODO: ["CHARACTER", char]
-      tokens.push([char, '']);
+      tokens.push({ variant: char, content: '' });
     } else if (char === '#') {
       //comments
       while (char !== '\n') {
@@ -35,7 +35,7 @@ export function lexer(code: string): Token[] {
         index += 1;
         char = code[index];
       }
-      tokens.push(['number', numberAsString]);
+      tokens.push({ variant: 'number', content: numberAsString });
       index -= 1; //prevent loosing data
       lastTokenized = code[index];
     } else if (
@@ -46,7 +46,7 @@ export function lexer(code: string): Token[] {
       char === '%'
     ) {
       // TODO: operator etc should be union and UPPERCASE!
-      tokens.push(['operator', char]);
+      tokens.push({ variant: 'operator', content: char });
       lastTokenized = char;
     } else if (char === '"') {
       let stringContent = '';
@@ -59,10 +59,10 @@ export function lexer(code: string): Token[] {
         char = code[index];
       }
 
-      tokens.push(['string', stringContent]);
+      tokens.push({ variant: 'string', content: stringContent });
       lastTokenized = 'string';
     } else if (char.match(/[\<\>\(\)\{\}\[\],=]/)) {
-      tokens.push([char as SpecialCharacter, '']);
+      tokens.push({ variant: char as SpecialCharacter, content: '' });
       lastTokenized = char;
     }
 
@@ -83,14 +83,14 @@ export function lexer(code: string): Token[] {
         term === 'for' ||
         term === 'while'
       ) {
-        tokens.push(['statement', term]);
+        tokens.push({ variant: 'statement', content: term });
       } else {
-        tokens.push(['name', term]);
+        tokens.push({ variant: 'name', content: term });
       }
       index -= 1; //prevent loosing data
       lastTokenized = 'name';
     }
   }
-  tokens.push(['END', 'END']);
+  tokens.push({ variant: 'END', content: 'END' });
   return tokens;
 }

@@ -35,4 +35,4 @@ type ExpressionVariant =
   | 'return'
   | 'function';
 
-type Token = [TokenVariant, string];
+type Token = { variant: TokenVariant; content: string };
