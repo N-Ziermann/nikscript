@@ -36,3 +36,13 @@ type ExpressionVariant =
   | 'function';
 
 type Token = { variant: TokenVariant; content: string };
+
+type ParserResultWithIndex = {
+  result: Expression[];
+  index: number;
+};
+
+type FunctionDescriptor = {
+  input: ParserResultWithIndex;
+  content: ParserResultWithIndex;
+};

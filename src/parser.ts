@@ -3,7 +3,7 @@ export function parser(
   index: number,
   type: ExpressionVariant,
   returnsymbol: SpecialCharacter
-): { result: Expression[]; index: number } {
+): ParserResultWithIndex {
   const result: Expression[] = [];
   let token = tokens[index];
   while (token.variant !== returnsymbol) {

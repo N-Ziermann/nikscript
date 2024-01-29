@@ -1,4 +1,4 @@
-let functions: any = {}; // uses seperate from vars because it doesnt have a local scope
+let functions: Record<string, FunctionDescriptor> = {}; // uses seperate from vars because it doesnt have a local scope
 let vars: any = {};
 let functionStack: {
   functionName: string;
@@ -44,7 +44,7 @@ export function interpreter(
         // functioncall for selvedefined function
 
         const functionContent = functions[content[0] + '()'];
-        const argsNeeded = functionContent[0][1].result as Expression[];
+        const argsNeeded = functionContent.input.result as Expression[];
         const argsGiven = content[1] as Expression[];
 
         if (argsGiven.length === argsNeeded.length) {
@@ -62,7 +62,7 @@ export function interpreter(
             ] = interpreter([argsGiven[i]]); // save function input arguments as variables
           }
           functionStack.push(tempFunctionStack[0]);
-          interpreter(functionContent[1][1].result);
+          interpreter(functionContent.content.result);
           const returnValue = functionStack.pop()?.returnValue;
           if (returnValue !== undefined) return returnValue;
         } else {
@@ -240,7 +240,11 @@ export function interpreter(
       const functionname = content[0] + '()';
       const functiondata = content[1];
 
-      functions[functionname] = functiondata;
+      // TODO: already build this correctly inside the parser, so that it doesnt need to be converted here
+      functions[functionname] = {
+        input: functiondata[0][1],
+        content: functiondata[1][1],
+      } as FunctionDescriptor;
     } else if (expr.type === 'return') {
       functionStack[functionStack.length - 1].returnValue = interpreter(
         expr.content
