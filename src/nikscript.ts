@@ -6,9 +6,8 @@
  * variable naming
  * remove all any's
  * use union types instead of string everywhere
- * only use 'let' where required
- * create functions to make the code more self-explainatory
- * no tuples (for example: a token should look like this: {type: TokenVariant, value: string} and not [TokenVariant, string])
+ * create 'helper'-functions to make the code more self-explainatory
+ * no tuples unreadable Arrays (for example: a token should look like this: {type: TokenVariant, value: string} and not [TokenVariant, string])
  */
 
 import { interpreter } from './interpreter';

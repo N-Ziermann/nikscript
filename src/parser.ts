@@ -36,14 +36,14 @@ export function parser(
       tokens[index + 1].variant === 'OPERATOR' &&
       type !== 'OPERATION'
     ) {
-      let data = parser(tokens, index, 'OPERATION', ';');
+      const data = parser(tokens, index, 'OPERATION', ';');
       result.push({ type: 'OPERATION', content: data.result });
       index = data.index - 1;
     } else if (token.variant === 'OPERATOR' && type !== 'OPERATION') {
       // for foo() + value
       const operationStart: Expression[] = [result.pop()!];
       const tmp = operationStart.concat({ type: 'OPERATION', content: '+' });
-      let data = parser(tokens, index + 1, 'OPERATION', ';');
+      const data = parser(tokens, index + 1, 'OPERATION', ';');
       result.push({ type: 'OPERATION', content: tmp.concat(data.result) });
       index = data.index - 1;
     } else if (
@@ -54,15 +54,14 @@ export function parser(
       token.content === '<' ||
       token.content === '>'
     ) {
-      // TODO: make results be (Express|Token)[] ?
       result.push({ type: token.variant, content: token.content });
     } else if (token.variant === 'NAME') {
       if (token.content === 'var') {
-        let data = parser(tokens, index + 1, 'ASSIGNMENT', ';');
+        const data = parser(tokens, index + 1, 'ASSIGNMENT', ';');
         result.push({ type: 'ASSIGNMENT', content: data.result });
         index = data.index - 1;
       } else if (token.content === 'return') {
-        let data = parser(tokens, index + 1, 'ASSIGNMENT', ';');
+        const data = parser(tokens, index + 1, 'ASSIGNMENT', ';');
         result.push({ type: 'RETURN', content: data.result });
         index = data.index - 1;
       } else if (token.content === 'func') {
@@ -90,24 +89,24 @@ export function parser(
           if (type === 'CONDITION') {
             result.push({ type: token.variant, content: token.content });
           } else {
-            let data = parser(tokens, index, 'COMPARISON', ')');
+            const data = parser(tokens, index, 'COMPARISON', ')');
             result.push({ type: 'COMPARISON', content: data.result });
             index = data.index;
           }
         } else {
-          let data = parser(tokens, index, 'ASSIGNMENT', ';');
+          const data = parser(tokens, index, 'ASSIGNMENT', ';');
           result.push({ type: 'ASSIGNMENT', content: data.result });
           index = data.index - 1;
         }
       } else if (tokens[index + 1].content === '(') {
-        let data = parser(tokens, index + 2, 'CALL', ')');
+        const data = parser(tokens, index + 2, 'CALL', ')');
         result.push({ type: 'CALL', content: [token.content, data.result] });
         index = data.index;
       } else {
         result.push({ type: token.variant, content: token.content });
       }
     } else if (token.content === '(') {
-      let data = parser(tokens, index + 1, 'BRACKET', ')');
+      const data = parser(tokens, index + 1, 'BRACKET', ')');
       result.push({ type: 'BRACKET', content: data.result });
       index = data.index;
     }

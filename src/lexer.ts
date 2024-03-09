@@ -1,5 +1,5 @@
 export function lexer(code: string): Token[] {
-  let tokens: Token[] = [];
+  const tokens: Token[] = [];
   let index = -1;
 
   let lastTokenized = ' '; // stores last accepted tokenvalue in case something (like negative numbers) depend on it

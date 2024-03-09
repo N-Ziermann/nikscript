@@ -88,7 +88,6 @@ it('should print a function parameter', () => {
   expect(logSpy?.mock.calls.map((args) => args[0])).toEqual([42]);
 });
 
-// todo: fix this test!
 it('should do math operations in the correct order', () => {
   const code = 'print ("-1 * 2 -- 1 = " + (-1*2--1));';
   interpret(code);
