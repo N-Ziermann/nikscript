@@ -1,5 +1,7 @@
 type Variable = number | string | boolean | undefined;
 
+// TODO: Expression[] are basically still tuples
+
 type Expression =
   | {
       type: Exclude<
@@ -17,8 +19,8 @@ type Expression =
       content: {
         name: string;
         definition: {
-          input: ParserResultWithIndex;
-          code: ParserResultWithIndex;
+          input: ParserResultWithIndex<Extract<Expression, { type: 'INPUT' }>>;
+          code: ParserResultWithIndex<Extract<Expression, { type: 'CODE' }>>;
         };
       };
     }
@@ -95,8 +97,8 @@ type Token =
       content: string;
     };
 
-type ParserResultWithIndex = {
-  result: Expression[];
+type ParserResultWithIndex<ResultType = Expression[]> = {
+  result: ResultType;
   index: number;
 };
 
