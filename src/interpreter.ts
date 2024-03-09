@@ -110,17 +110,17 @@ export function interpreter(
       }
       return resultValue;
     } else if (expr.type === 'STATEMENT') {
-      switch (expr.content[0]) {
+      switch (expr.content.type) {
         case 'if':
           if (
             interpreter([
-              { type: 'COMPARISON', content: expr.content[1][0][1] },
+              { type: 'COMPARISON', content: expr.content.statement.condition },
             ])
           ) {
-            interpreter(expr.content[1][1][1]); // IF_TRUE
+            interpreter(expr.content.statement.trueCase);
           } else {
-            if (expr.content[1][2][1] !== undefined) {
-              interpreter(expr.content[1][2][1]); // IF_FALSE
+            if (expr.content.statement.falseCase !== undefined) {
+              interpreter(expr.content.statement.falseCase);
             }
           }
           break;
@@ -128,18 +128,18 @@ export function interpreter(
         case 'while':
           while (
             interpreter([
-              { type: 'COMPARISON', content: expr.content[1][0][1] },
+              { type: 'COMPARISON', content: expr.content.statement.condition },
             ])
           ) {
-            interpreter(expr.content[1][1][1]);
+            interpreter(expr.content.statement.trueCase);
           }
 
         case 'for':
-          const condition = expr.content[1][0][1] as Expression[];
-          const loopVarExpr = condition[0].content[0] as Expression;
+          const condition = expr.content.statement.condition; //as Expression[];
+          const loopVarExpr = condition[0].content[0]; //as Expression;
           const startValue = interpreter([condition[0].content[2]]);
           const limit = interpreter([condition[2]]) as number;
-          const loopCode = expr.content[1][1][1];
+          const loopCode = expr.content.statement.trueCase;
 
           if (
             condition[1].type === 'CHARACTER' &&

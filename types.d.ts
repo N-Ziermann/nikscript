@@ -1,4 +1,19 @@
-type Expression = { type: ExpressionVariant | TokenVariant; content: any };
+type Expression =
+  | {
+      type: Exclude<ExpressionVariant | TokenVariant, 'STATEMENT'>;
+      content: any;
+    }
+  | {
+      type: 'STATEMENT';
+      content: {
+        type: Statement_Variant;
+        statement: {
+          condition: Expression[];
+          trueCase: Expression[];
+          falseCase?: Expression[];
+        };
+      };
+    };
 
 type SpecialCharacter =
   | '<'
@@ -35,7 +50,11 @@ type ExpressionVariant =
   | 'RETURN'
   | 'FUNCTION';
 
-type Token = { variant: TokenVariant; content: string };
+type Statement_Variant = 'if' | 'else' | 'for' | 'while';
+
+type Token =
+  | { variant: 'STATEMENT'; content: Statement_Variant }
+  | { variant: Exclude<TokenVariant, 'STATEMENT'>; content: string };
 
 type ParserResultWithIndex = {
   result: Expression[];

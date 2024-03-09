@@ -23,14 +23,14 @@ export function parser(
       }
       result.push({
         type: 'STATEMENT',
-        content: [
-          statement_type,
-          [
-            ['CONDITION', cond.result],
-            ['IF_TRUE', ifTrue.result],
-            ['IF_FALSE', ifFalse?.result],
-          ],
-        ],
+        content: {
+          type: statement_type,
+          statement: {
+            condition: cond.result,
+            trueCase: ifTrue.result,
+            falseCase: ifFalse?.result,
+          },
+        },
       });
     } else if (
       tokens[index + 1].variant === 'OPERATOR' &&
