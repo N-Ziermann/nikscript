@@ -7,9 +7,9 @@
  * variable naming
  * remove all any's
  * use union types instead of string everywhere
- * only let if required
- * create functions to make the code more selfexplainatory
- * no tuples (for example: a token should look like this: {type: TokenVariant, value: string})
+ * only use 'let' where required
+ * create functions to make the code more self-explainatory
+ * no tuples (for example: a token should look like this: {type: TokenVariant, value: string} and not [TokenVariant, string])
  */
 
 import { interpreter } from './interpreter';
@@ -18,6 +18,6 @@ import { parser } from './parser';
 
 export function interpret(code: string): void {
   const tokens = lexer(code);
-  const expressions = parser(tokens, 0, 'code', 'END');
+  const expressions = parser(tokens, 0, 'CODE', 'END');
   interpreter(expressions.result);
 }

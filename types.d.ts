@@ -13,27 +13,27 @@ type SpecialCharacter =
   | 'END';
 
 type TokenVariant =
-  | 'number'
-  | 'string'
-  | 'operator'
-  | 'statement'
-  | 'name'
-  | 'END'
-  | 'CHARACTER';
+  | 'NUMBER'
+  | 'STRING'
+  | 'OPERATOR'
+  | 'STATEMENT'
+  | 'NAME'
+  | 'CHARACTER'
+  | 'END';
 
 type ExpressionVariant =
-  | 'ifTrue'
-  | 'ifFalse'
-  | 'operation'
-  | 'code'
-  | 'assignment'
-  | 'condition'
-  | 'input'
-  | 'bracket'
-  | 'call'
-  | 'comparison'
-  | 'return'
-  | 'function';
+  | 'IF_TRUE'
+  | 'IF_FALSE'
+  | 'OPERATION'
+  | 'CODE'
+  | 'ASSIGNMENT'
+  | 'CONDITION'
+  | 'INPUT'
+  | 'BRACKET'
+  | 'CALL'
+  | 'COMPARISON'
+  | 'RETURN'
+  | 'FUNCTION';
 
 type Token = { variant: TokenVariant; content: string };
 

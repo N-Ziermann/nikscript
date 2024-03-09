@@ -20,15 +20,15 @@ export function interpreter(
       }
     }
 
-    if (expr.type === 'number') {
+    if (expr.type === 'NUMBER') {
       return parseFloat(expr.content);
-    } else if (expr.type === 'string') {
+    } else if (expr.type === 'STRING') {
       return expr.content;
-    } else if (expr.type === 'name') {
+    } else if (expr.type === 'NAME') {
       if (functionStack.length === 0) return vars[expr.content];
       else
         return functionStack[functionStack.length - 1].arguments[expr.content];
-    } else if (expr.type === 'assignment') {
+    } else if (expr.type === 'ASSIGNMENT') {
       const valueToAssign = interpreter([expr.content[2]]);
       if (functionStack.length === 0) {
         vars[expr.content[0].content] = valueToAssign;
@@ -37,7 +37,7 @@ export function interpreter(
           expr.content[0].content
         ] = valueToAssign;
       }
-    } else if (expr.type === 'call') {
+    } else if (expr.type === 'CALL') {
       const content = expr.content;
 
       if (content[0] + '()' in functions) {
@@ -84,7 +84,7 @@ export function interpreter(
             console.log('function "' + content[0] + '" is undefined');
         }
       }
-    } else if (expr.type === 'operation') {
+    } else if (expr.type === 'OPERATION') {
       const content = expr.content as Expression[];
       let resultValue = interpreter([content[0]]) as number;
 
@@ -109,18 +109,18 @@ export function interpreter(
         }
       }
       return resultValue;
-    } else if (expr.type === 'statement') {
+    } else if (expr.type === 'STATEMENT') {
       switch (expr.content[0]) {
         case 'if':
           if (
             interpreter([
-              { type: 'comparison', content: expr.content[1][0][1] },
+              { type: 'COMPARISON', content: expr.content[1][0][1] },
             ])
           ) {
-            interpreter(expr.content[1][1][1]); // ifTrue
+            interpreter(expr.content[1][1][1]); // IF_TRUE
           } else {
             if (expr.content[1][2][1] !== undefined) {
-              interpreter(expr.content[1][2][1]); // ifFalse
+              interpreter(expr.content[1][2][1]); // IF_FALSE
             }
           }
           break;
@@ -128,7 +128,7 @@ export function interpreter(
         case 'while':
           while (
             interpreter([
-              { type: 'comparison', content: expr.content[1][0][1] },
+              { type: 'COMPARISON', content: expr.content[1][0][1] },
             ])
           ) {
             interpreter(expr.content[1][1][1]);
@@ -199,7 +199,7 @@ export function interpreter(
             }
           }
       }
-    } else if (expr.type === 'condition' || expr.type === 'comparison') {
+    } else if (expr.type === 'CONDITION' || expr.type === 'COMPARISON') {
       const content = expr.content as Expression[];
 
       switch (
@@ -232,9 +232,9 @@ export function interpreter(
             return false;
           }
       }
-    } else if (expr.type === 'bracket') {
+    } else if (expr.type === 'BRACKET') {
       return interpreter(expr.content);
-    } else if (expr.type === 'function') {
+    } else if (expr.type === 'FUNCTION') {
       // store defined function
       const content = expr.content;
       const functionname = content[0] + '()';
@@ -245,7 +245,7 @@ export function interpreter(
         input: functiondata[0][1],
         content: functiondata[1][1],
       } as FunctionDescriptor;
-    } else if (expr.type === 'return') {
+    } else if (expr.type === 'RETURN') {
       functionStack[functionStack.length - 1].returnValue = interpreter(
         expr.content
       );

@@ -11,105 +11,104 @@ export function parser(
       break;
     } else if (isEndOfOperation(type, token)) {
       break;
-    } else if (token.variant === 'statement') {
+    } else if (token.variant === 'STATEMENT') {
       const statement_type = token.content;
-      const cond = parser(tokens, index + 2, 'condition', '{');
-      const ifTrue = parser(tokens, cond.index + 1, 'ifTrue', '}');
+      const cond = parser(tokens, index + 2, 'CONDITION', '{');
+      const ifTrue = parser(tokens, cond.index + 1, 'IF_TRUE', '}');
       index = ifTrue.index;
       let ifFalse: ReturnType<typeof parser> | undefined = undefined;
       if (tokens[ifTrue.index + 1].content === 'else') {
-        ifFalse = parser(tokens, ifTrue.index + 2, 'ifFalse', '}');
+        ifFalse = parser(tokens, ifTrue.index + 2, 'IF_FALSE', '}');
         index = ifFalse.index;
       }
       result.push({
-        type: 'statement',
+        type: 'STATEMENT',
         content: [
           statement_type,
           [
-            ['condition', cond.result],
-            ['ifTrue', ifTrue.result],
-            ['ifFalse', ifFalse?.result],
+            ['CONDITION', cond.result],
+            ['IF_TRUE', ifTrue.result],
+            ['IF_FALSE', ifFalse?.result],
           ],
         ],
       });
     } else if (
-      tokens[index + 1].variant === 'operator' &&
-      type !== 'operation'
+      tokens[index + 1].variant === 'OPERATOR' &&
+      type !== 'OPERATION'
     ) {
-      let data = parser(tokens, index, 'operation', ';');
-      result.push({ type: 'operation', content: data.result });
+      let data = parser(tokens, index, 'OPERATION', ';');
+      result.push({ type: 'OPERATION', content: data.result });
       index = data.index - 1;
-    } else if (token.variant === 'operator' && type !== 'operation') {
+    } else if (token.variant === 'OPERATOR' && type !== 'OPERATION') {
       // for foo() + value
       const operationStart: Expression[] = [result.pop()!];
-      const tmp = operationStart.concat({ type: 'operation', content: '+' });
-      let data = parser(tokens, index + 1, 'operation', ';');
-      result.push({ type: 'operation', content: tmp.concat(data.result) });
+      const tmp = operationStart.concat({ type: 'OPERATION', content: '+' });
+      let data = parser(tokens, index + 1, 'OPERATION', ';');
+      result.push({ type: 'OPERATION', content: tmp.concat(data.result) });
       index = data.index - 1;
     } else if (
-      token.variant === 'number' ||
-      token.variant === 'string' ||
-      token.variant === 'operator' ||
+      token.variant === 'NUMBER' ||
+      token.variant === 'STRING' ||
+      token.variant === 'OPERATOR' ||
       token.content === '=' ||
       token.content === '<' ||
       token.content === '>'
     ) {
       // TODO: make results be (Express|Token)[] ?
       result.push({ type: token.variant, content: token.content });
-    } else if (token.variant === 'name') {
+    } else if (token.variant === 'NAME') {
       if (token.content === 'var') {
-        let data = parser(tokens, index + 1, 'assignment', ';');
-        result.push({ type: 'assignment', content: data.result });
+        let data = parser(tokens, index + 1, 'ASSIGNMENT', ';');
+        result.push({ type: 'ASSIGNMENT', content: data.result });
         index = data.index - 1;
       } else if (token.content === 'return') {
-        let data = parser(tokens, index + 1, 'assignment', ';');
-        result.push({ type: 'return', content: data.result });
+        let data = parser(tokens, index + 1, 'ASSIGNMENT', ';');
+        result.push({ type: 'RETURN', content: data.result });
         index = data.index - 1;
       } else if (token.content === 'func') {
         const funcName = tokens[index + 1].content;
-        const inputVars = parser(tokens, index + 3, 'input', '{');
+        const inputVars = parser(tokens, index + 3, 'INPUT', '{');
         index = inputVars.index;
-        const funcContent = parser(tokens, index + 1, 'input', '}');
+        const funcContent = parser(tokens, index + 1, 'INPUT', '}');
         index = funcContent.index;
         result.push({
-          type: 'function',
+          type: 'FUNCTION',
           content: [
             funcName,
             [
-              ['input', inputVars],
-              ['content', funcContent],
+              ['INPUT', inputVars],
+              ['CONTENT', funcContent],
             ],
           ],
         });
       } else if (
         tokens[index + 1].content === '=' &&
-        type !== 'assignment' &&
-        type !== 'comparison'
+        type !== 'ASSIGNMENT' &&
+        type !== 'COMPARISON'
       ) {
         if (tokens[index + 2].content === '=') {
-          if (type === 'condition') {
+          if (type === 'CONDITION') {
             result.push({ type: token.variant, content: token.content });
           } else {
-            let data = parser(tokens, index, 'comparison', ')');
-            result.push({ type: 'comparison', content: data.result });
+            let data = parser(tokens, index, 'COMPARISON', ')');
+            result.push({ type: 'COMPARISON', content: data.result });
             index = data.index;
           }
         } else {
-          let data = parser(tokens, index, 'assignment', ';');
-          result.push({ type: 'assignment', content: data.result });
+          let data = parser(tokens, index, 'ASSIGNMENT', ';');
+          result.push({ type: 'ASSIGNMENT', content: data.result });
           index = data.index - 1;
         }
       } else if (tokens[index + 1].content === '(') {
-        let data = parser(tokens, index + 2, 'call', ')');
-        result.push({ type: 'call', content: [token.content, data.result] });
+        let data = parser(tokens, index + 2, 'CALL', ')');
+        result.push({ type: 'CALL', content: [token.content, data.result] });
         index = data.index;
       } else {
-        // TODO
         result.push({ type: token.variant, content: token.content });
       }
     } else if (token.content === '(') {
-      let data = parser(tokens, index + 1, 'bracket', ')');
-      result.push({ type: 'bracket', content: data.result });
+      let data = parser(tokens, index + 1, 'BRACKET', ')');
+      result.push({ type: 'BRACKET', content: data.result });
       index = data.index;
     }
 
@@ -121,7 +120,7 @@ export function parser(
 
 function isEndOfOperation(type: ExpressionVariant, token: Token): boolean {
   return (
-    type === 'operation' &&
+    type === 'OPERATION' &&
     (token.content === ')' ||
       token.content === '=' ||
       token.content === '<' ||
@@ -133,6 +132,6 @@ function isEndOfOperation(type: ExpressionVariant, token: Token): boolean {
 function isForLoopComparison(type: ExpressionVariant, token: Token): boolean {
   // "<" and ">" have a unique syntax as part of an assignment in for-loops
   return (
-    type === 'assignment' && (token.content === '<' || token.content === '>')
+    type === 'ASSIGNMENT' && (token.content === '<' || token.content === '>')
   );
 }
