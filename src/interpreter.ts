@@ -66,18 +66,12 @@ export function interpreter(
           const returnValue = functionStack.pop()?.returnValue;
           if (returnValue !== undefined) return returnValue;
         } else {
-          // TODO: use `${}`
           console.log(
-            content[0] +
-              ' takes ' +
-              argsNeeded.length +
-              ' arguments but ' +
-              argsGiven.length +
-              ' were given!'
+            `${content[0]} takes ${argsNeeded.length} arguments but ${argsGiven.length} were given!`
           );
         }
       } else {
-        //predefinded function?
+        // check if predefinded function
         switch (content[0]) {
           case 'print':
             console.log(interpreter(content[1]));
