@@ -42,7 +42,7 @@ export function parser(
     } else if (token.variant === 'OPERATOR' && type !== 'OPERATION') {
       // for foo() + value
       const operationStart: Expression[] = [result.pop()!];
-      const tmp = operationStart.concat({ type: 'OPERATION', content: '+' });
+      const tmp = operationStart.concat({ type: 'OPERATOR', content: '+' });
       const data = parser(tokens, index + 1, 'OPERATION', ';');
       result.push({ type: 'OPERATION', content: tmp.concat(data.result) });
       index = data.index - 1;

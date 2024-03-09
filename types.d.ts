@@ -2,8 +2,15 @@ type Variable = number | string | boolean | undefined;
 
 type Expression =
   | {
-      type: Exclude<ExpressionVariant, 'RETURN' | 'FUNCTION' | 'CALL'>;
+      type: Exclude<
+        ExpressionVariant,
+        'RETURN' | 'FUNCTION' | 'CALL' | 'OPERATION'
+      >;
       content: any;
+    }
+  | {
+      type: 'OPERATION';
+      content: Expression[];
     }
   | {
       type: 'FUNCTION';
@@ -77,11 +84,16 @@ type ExpressionVariant =
   | 'RETURN'
   | 'FUNCTION';
 
-type Statement_Variant = 'if' | 'else' | 'for' | 'while';
+type StatementVariant = 'if' | 'else' | 'for' | 'while';
+type OperatorVariant = '+' | '-' | '/' | '*' | '%';
 
 type Token =
-  | { variant: 'STATEMENT'; content: Statement_Variant }
-  | { variant: Exclude<TokenVariant, 'STATEMENT'>; content: string };
+  | { variant: 'STATEMENT'; content: StatementVariant }
+  | { variant: 'OPERATOR'; content: OperatorVariant }
+  | {
+      variant: Exclude<TokenVariant, 'STATEMENT' | 'OPERATOR'>;
+      content: string;
+    };
 
 type ParserResultWithIndex = {
   result: Expression[];
