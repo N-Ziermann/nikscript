@@ -3,7 +3,7 @@ import { assertIsNumber, assertIsNumberOrString } from './assertions';
 const functions: Record<string, FunctionDescriptor> = {}; // use its own seperate vars (FunctionDescriptor.input) because thats its local scope
 const functionStack: {
   functionName: string;
-  arguments: Record<string, Variable | Variable[]>; // any needs to be replaced with smth. like Variable | Expression[]?
+  arguments: Record<string, Variable | Variable[]>;
   returnValue: Variable | Variable[];
 }[] = [];
 const vars: Record<string, Variable | Variable[]> = {};
@@ -62,9 +62,11 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
             ] = interpreter([argsGiven[i]]); // save function input arguments as variables
           }
           functionStack.push(tempFunctionStack[0]);
-          interpreter(functionContent.content.result);
+          interpreter(functionContent.code.result);
           const returnValue = functionStack.pop()?.returnValue;
-          if (returnValue !== undefined) return returnValue;
+          if (returnValue !== undefined) {
+            return returnValue;
+          }
         } else {
           console.log(
             `${content[0]} takes ${argsNeeded.length} arguments but ${argsGiven.length} were given!`
@@ -248,15 +250,7 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
       return interpreter(expr.content);
     } else if (expr.type === 'FUNCTION') {
       // defines and stores a function
-      const content = expr.content;
-      const functionname = content[0] + '()';
-      const functiondata = content[1];
-
-      // TODO: already build this correctly inside the parser, so that it doesnt need to be converted here
-      functions[functionname] = {
-        input: functiondata[0][1],
-        content: functiondata[1][1],
-      } as FunctionDescriptor;
+      functions[expr.content.name + '()'] = expr.content.definition;
     } else if (expr.type === 'RETURN') {
       functionStack[functionStack.length - 1].returnValue = interpreter(
         expr.content

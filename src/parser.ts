@@ -72,13 +72,13 @@ export function parser(
         index = funcContent.index;
         result.push({
           type: 'FUNCTION',
-          content: [
-            funcName,
-            [
-              ['INPUT', inputVars],
-              ['CONTENT', funcContent],
-            ],
-          ],
+          content: {
+            name: funcName,
+            definition: {
+              input: inputVars,
+              code: funcContent,
+            },
+          },
         });
       } else if (
         tokens[index + 1].content === '=' &&
@@ -100,6 +100,7 @@ export function parser(
         }
       } else if (tokens[index + 1].content === '(') {
         const data = parser(tokens, index + 2, 'CALL', ')');
+        // todo: tuple!
         result.push({ type: 'CALL', content: [token.content, data.result] });
         index = data.index;
       } else {

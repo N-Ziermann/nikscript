@@ -2,8 +2,26 @@ type Variable = number | string | boolean | undefined;
 
 type Expression =
   | {
-      type: Exclude<ExpressionVariant | TokenVariant, 'STATEMENT'>;
+      type: Exclude<ExpressionVariant, 'RETURN' | 'FUNCTION'>;
       content: any;
+    }
+  | {
+      type: 'FUNCTION';
+      content: {
+        name: string;
+        definition: {
+          input: ParserResultWithIndex;
+          code: ParserResultWithIndex;
+        };
+      };
+    }
+  | {
+      type: 'RETURN';
+      content: Expression[];
+    }
+  | {
+      type: Exclude<TokenVariant, 'STATEMENT'>;
+      content: string;
     }
   | {
       type: 'STATEMENT';
@@ -65,5 +83,5 @@ type ParserResultWithIndex = {
 
 type FunctionDescriptor = {
   input: ParserResultWithIndex;
-  content: ParserResultWithIndex;
+  code: ParserResultWithIndex;
 };
