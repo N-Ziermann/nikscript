@@ -1,17 +1,29 @@
+type ExtractWithUnionType<
+  Type,
+  Key extends keyof Type,
+  Pattern
+> = Type extends (Pattern extends Type[Key] ? Type : never) ? Type : never;
+
+type ExpressionByType<Type extends Expression['type']> = ExtractWithUnionType<
+  Expression,
+  'type',
+  Type
+>;
+
 type Variable = number | string | boolean | undefined;
 
-// TODO: Expression[] are basically still tuples
+// TODO: Expression[] are basically still tuples => get rid of them
 
 type Expression =
   | {
       type: Exclude<
         ExpressionVariant,
-        'RETURN' | 'FUNCTION' | 'CALL' | 'OPERATION'
+        'RETURN' | 'FUNCTION' | 'CALL' | 'OPERATION' | 'CODE' | 'INPUT'
       >;
       content: any;
     }
   | {
-      type: 'OPERATION';
+      type: 'OPERATION' | 'CODE' | 'INPUT';
       content: Expression[];
     }
   | {
@@ -19,8 +31,8 @@ type Expression =
       content: {
         name: string;
         definition: {
-          input: ParserResultWithIndex<Extract<Expression, { type: 'INPUT' }>>;
-          code: ParserResultWithIndex<Extract<Expression, { type: 'CODE' }>>;
+          input: ParserResultWithIndex<'INPUT'>;
+          code: ParserResultWithIndex<'CODE'>;
         };
       };
     }
@@ -97,12 +109,12 @@ type Token =
       content: string;
     };
 
-type ParserResultWithIndex<ResultType = Expression[]> = {
-  result: ResultType;
+type ParserResultWithIndex<ResultType extends Expression['type'] = any> = {
+  result: ExpressionByType<ResultType>['content'];
   index: number;
 };
 
 type FunctionDescriptor = {
-  input: ParserResultWithIndex;
-  code: ParserResultWithIndex;
+  input: ParserResultWithIndex<'INPUT'>;
+  code: ParserResultWithIndex<'CODE'>;
 };

@@ -1,9 +1,10 @@
-export function parser(
+export function parser<Type extends ExpressionVariant>(
   tokens: Token[],
   index: number,
-  type: ExpressionVariant,
+  type: Type,
   returnsymbol: SpecialCharacter
-): ParserResultWithIndex {
+  // todo use the generic "Type" instead of hardcoding any
+): ParserResultWithIndex<any> {
   const result: Expression[] = [];
   let token = tokens[index];
   while (token.content !== returnsymbol) {
