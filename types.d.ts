@@ -2,7 +2,7 @@ type Variable = number | string | boolean | undefined;
 
 type Expression =
   | {
-      type: Exclude<ExpressionVariant, 'RETURN' | 'FUNCTION'>;
+      type: Exclude<ExpressionVariant, 'RETURN' | 'FUNCTION' | 'CALL'>;
       content: any;
     }
   | {
@@ -13,6 +13,13 @@ type Expression =
           input: ParserResultWithIndex;
           code: ParserResultWithIndex;
         };
+      };
+    }
+  | {
+      type: 'CALL';
+      content: {
+        functionName: string;
+        parameters: Expression[];
       };
     }
   | {

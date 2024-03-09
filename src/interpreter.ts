@@ -1,4 +1,8 @@
-import { assertIsNumber, assertIsNumberOrString } from './assertions';
+import {
+  assertIsArray,
+  assertIsNumber,
+  assertIsNumberOrString,
+} from './assertions';
 
 const functions: Record<string, FunctionDescriptor> = {}; // use its own seperate vars (FunctionDescriptor.input) because thats its local scope
 const functionStack: {
@@ -40,18 +44,19 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
     } else if (expr.type === 'CALL') {
       const content = expr.content;
 
-      if (content[0] + '()' in functions) {
-        // functioncall for selvedefined function
+      // todo: could I just get rid of all of these "+ '()'"
+      if (content.functionName + '()' in functions) {
+        // function-call for self-defined function
 
-        const functionContent = functions[content[0] + '()'];
-        const argsNeeded = functionContent.input.result as Expression[];
-        const argsGiven = content[1] as Expression[];
+        const functionContent = functions[content.functionName + '()'];
+        const argsNeeded = functionContent.input.result;
+        const argsGiven = content.parameters;
 
         if (argsGiven.length === argsNeeded.length) {
           const tempFunctionStack: typeof functionStack = []; // used so that no values get mixed up in for loop below (values would be taken from newest function in stack)
 
           tempFunctionStack.push({
-            functionName: content[0] + '()',
+            functionName: content.functionName + '()',
             arguments: {},
             returnValue: undefined,
           });
@@ -69,21 +74,21 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
           }
         } else {
           console.log(
-            `${content[0]} takes ${argsNeeded.length} arguments but ${argsGiven.length} were given!`
+            `${content.functionName} takes ${argsNeeded.length} arguments but ${argsGiven.length} were given!`
           );
         }
       } else {
         // check if predefinded function
-        switch (content[0]) {
+        switch (content.functionName) {
           case 'print':
-            console.log(interpreter(content[1]));
+            console.log(interpreter(content.parameters));
             break;
 
           case 'len':
-            return (interpreter(content[1]) as any[]).length;
+            return assertIsArray(interpreter(content.parameters)).length;
 
           default:
-            console.log('function "' + content[0] + '" is undefined');
+            console.log(`function "${content.functionName}" is undefined`);
         }
       }
     } else if (expr.type === 'OPERATION') {

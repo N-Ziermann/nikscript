@@ -100,8 +100,10 @@ export function parser(
         }
       } else if (tokens[index + 1].content === '(') {
         const data = parser(tokens, index + 2, 'CALL', ')');
-        // todo: tuple!
-        result.push({ type: 'CALL', content: [token.content, data.result] });
+        result.push({
+          type: 'CALL',
+          content: { functionName: token.content, parameters: data.result },
+        });
         index = data.index;
       } else {
         result.push({ type: token.variant, content: token.content });
