@@ -6,7 +6,7 @@ export function parser(
 ): ParserResultWithIndex {
   const result: Expression[] = [];
   let token = tokens[index];
-  while (token.variant !== returnsymbol) {
+  while (token.content !== returnsymbol) {
     if (isForLoopComparison(type, token)) {
       break;
     } else if (isEndOfOperation(type, token)) {
@@ -50,9 +50,9 @@ export function parser(
       token.variant === 'number' ||
       token.variant === 'string' ||
       token.variant === 'operator' ||
-      token.variant === '=' ||
-      token.variant === '<' ||
-      token.variant === '>'
+      token.content === '=' ||
+      token.content === '<' ||
+      token.content === '>'
     ) {
       // TODO: make results be (Express|Token)[] ?
       result.push({ type: token.variant, content: token.content });
@@ -82,11 +82,11 @@ export function parser(
           ],
         });
       } else if (
-        tokens[index + 1].variant === '=' &&
+        tokens[index + 1].content === '=' &&
         type !== 'assignment' &&
         type !== 'comparison'
       ) {
-        if (tokens[index + 2].variant === '=') {
+        if (tokens[index + 2].content === '=') {
           if (type === 'condition') {
             result.push({ type: token.variant, content: token.content });
           } else {
@@ -99,7 +99,7 @@ export function parser(
           result.push({ type: 'assignment', content: data.result });
           index = data.index - 1;
         }
-      } else if (tokens[index + 1].variant === '(') {
+      } else if (tokens[index + 1].content === '(') {
         let data = parser(tokens, index + 2, 'call', ')');
         result.push({ type: 'call', content: [token.content, data.result] });
         index = data.index;
@@ -107,7 +107,7 @@ export function parser(
         // TODO
         result.push({ type: token.variant, content: token.content });
       }
-    } else if (token.variant === '(') {
+    } else if (token.content === '(') {
       let data = parser(tokens, index + 1, 'bracket', ')');
       result.push({ type: 'bracket', content: data.result });
       index = data.index;
@@ -122,17 +122,17 @@ export function parser(
 function isEndOfOperation(type: ExpressionVariant, token: Token): boolean {
   return (
     type === 'operation' &&
-    (token.variant === ')' ||
-      token.variant === '=' ||
-      token.variant === '<' ||
-      token.variant === '>' ||
-      token.variant === ',')
+    (token.content === ')' ||
+      token.content === '=' ||
+      token.content === '<' ||
+      token.content === '>' ||
+      token.content === ',')
   );
 }
 
 function isForLoopComparison(type: ExpressionVariant, token: Token): boolean {
   // "<" and ">" have a unique syntax as part of an assignment in for-loops
   return (
-    type === 'assignment' && (token.variant === '<' || token.variant === '>')
+    type === 'assignment' && (token.content === '<' || token.content === '>')
   );
 }

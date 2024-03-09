@@ -141,7 +141,10 @@ export function interpreter(
           const limit = interpreter([condition[2]]) as number;
           const loopCode = expr.content[1][1][1];
 
-          if (condition[1].type === '<') {
+          if (
+            condition[1].type === 'CHARACTER' &&
+            condition[1].content === '<'
+          ) {
             if (functionStack.length === 0) {
               // not inside a function
               for (
@@ -166,7 +169,10 @@ export function interpreter(
                 interpreter(loopCode);
               }
             }
-          } else if (condition[1].type === '>') {
+          } else if (
+            condition[1].type === 'CHARACTER' &&
+            condition[1].content === '>'
+          ) {
             if (functionStack.length === 0) {
               // not inside a function
               for (
@@ -197,7 +203,7 @@ export function interpreter(
       const content = expr.content as Expression[];
 
       switch (
-        content[1].type // type of comparison
+        content[1].content // type of comparison
       ) {
         case '=':
           if (interpreter([content[0]]) === interpreter([content[3]])) {

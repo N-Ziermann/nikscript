@@ -13,13 +13,13 @@ type SpecialCharacter =
   | 'END';
 
 type TokenVariant =
-  | SpecialCharacter
   | 'number'
   | 'string'
   | 'operator'
   | 'statement'
   | 'name'
-  | 'END';
+  | 'END'
+  | 'CHARACTER';
 
 type ExpressionVariant =
   | 'ifTrue'

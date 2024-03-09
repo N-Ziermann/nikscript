@@ -11,8 +11,7 @@ export function lexer(code: string): Token[] {
     if (char === ' ' || char === '\n') {
       continue;
     } else if (char === ';') {
-      // TODO: ["CHARACTER", char]
-      tokens.push({ variant: char, content: '' });
+      tokens.push({ variant: 'CHARACTER', content: char });
     } else if (char === '#') {
       //comments
       while (char !== '\n') {
@@ -62,7 +61,7 @@ export function lexer(code: string): Token[] {
       tokens.push({ variant: 'string', content: stringContent });
       lastTokenized = 'string';
     } else if (char.match(/[\<\>\(\)\{\}\[\],=]/)) {
-      tokens.push({ variant: char as SpecialCharacter, content: '' });
+      tokens.push({ variant: 'CHARACTER', content: char });
       lastTokenized = char;
     }
 
