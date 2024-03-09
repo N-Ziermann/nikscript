@@ -1,3 +1,5 @@
+type Variable = number | string | boolean | undefined;
+
 type Expression =
   | {
       type: Exclude<ExpressionVariant | TokenVariant, 'STATEMENT'>;

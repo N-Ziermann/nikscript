@@ -1,6 +1,6 @@
 /**
  * todo:
- * find more elegant alternative to using "as number" everywhere (generics?)
+ * replace all "as number" etc. with assertions from assertions.ts
  * publish build result to npm (using gh actions)
  * also allow running it using npx by passing the filename of the executable as a parameter
  * eslint

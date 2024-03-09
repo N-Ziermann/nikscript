@@ -1,14 +1,14 @@
+import { assertIsNumber, assertIsNumberOrString } from './assertions';
+
 let functions: Record<string, FunctionDescriptor> = {}; // uses seperate from vars because it doesnt have a local scope
 let functionStack: {
   functionName: string;
-  arguments: Record<string, any>;
-  returnValue: any;
+  arguments: Record<string, any>; // any needs to be replaced with smth. like Variable | Expression[]?
+  returnValue: Variable | Variable[];
 }[] = [];
-let vars: Record<string, ReturnType<typeof interpreter>> = {};
+let vars: Record<string, Variable | Variable[]> = {};
 
-export function interpreter(
-  expressions: Expression[]
-): any[] | number | string | boolean | undefined {
+export function interpreter(expressions: Expression[]): Variable | Variable[] {
   let index = 0;
 
   while (index < expressions.length) {
@@ -86,25 +86,32 @@ export function interpreter(
       }
     } else if (expr.type === 'OPERATION') {
       const content = expr.content as Expression[];
-      let resultValue = interpreter([content[0]]) as number;
+      let resultValue = assertIsNumberOrString(interpreter([content[0]]));
 
       for (let i = 1; i < content.length; i += 2) {
         switch (content[i].content) {
           case '+':
-            resultValue += interpreter([content[i + 1]]) as number;
+            // @ts-ignore => number | string can normally not be added
+            resultValue += assertIsNumberOrString(
+              interpreter([content[i + 1]])
+            );
             break;
           case '-':
-            resultValue -= interpreter([content[i + 1]]) as number;
+            resultValue = assertIsNumber(resultValue);
+            resultValue -= assertIsNumber(interpreter([content[i + 1]]));
             break;
           case '*':
-            resultValue *= interpreter([content[i + 1]]) as number;
+            resultValue = assertIsNumber(resultValue);
+            resultValue *= assertIsNumber(interpreter([content[i + 1]]));
             break;
           case '/':
-            resultValue /= interpreter([content[i + 1]]) as number;
+            resultValue = assertIsNumber(resultValue);
+            resultValue /= assertIsNumber(interpreter([content[i + 1]]));
             break;
           case '%':
             resultValue =
-              resultValue % (interpreter([content[i + 1]]) as number);
+              assertIsNumber(resultValue) %
+              assertIsNumber(interpreter([content[i + 1]]));
             break;
         }
       }
