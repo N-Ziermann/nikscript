@@ -3,7 +3,7 @@ import { assertIsNumber, assertIsNumberOrString } from './assertions';
 const functions: Record<string, FunctionDescriptor> = {}; // use its own seperate vars (FunctionDescriptor.input) because thats its local scope
 const functionStack: {
   functionName: string;
-  arguments: Record<string, any>; // any needs to be replaced with smth. like Variable | Expression[]?
+  arguments: Record<string, Variable | Variable[]>; // any needs to be replaced with smth. like Variable | Expression[]?
   returnValue: Variable | Variable[];
 }[] = [];
 const vars: Record<string, Variable | Variable[]> = {};
@@ -142,10 +142,10 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
           }
 
         case 'for':
-          const condition = expr.content.statement.condition; //as Expression[];
-          const loopVarExpr = condition[0].content[0]; //as Expression;
+          const condition = expr.content.statement.condition;
+          const loopVarExpr = condition[0].content[0] as Expression;
           const startValue = interpreter([condition[0].content[2]]);
-          const limit = interpreter([condition[2]]) as number;
+          const limit = assertIsNumber(interpreter([condition[2]]));
           const loopCode = expr.content.statement.trueCase;
 
           if (
@@ -153,25 +153,28 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
             condition[1].content === '<'
           ) {
             if (functionStack.length === 0) {
-              // not inside a function
+              // not inside any function => global variable scope
               for (
                 vars[loopVarExpr.content] = startValue;
-                (vars[loopVarExpr.content] as any as number) < limit;
-                (vars[loopVarExpr.content] as any as number)++
+                assertIsNumber(vars[loopVarExpr.content]) < limit;
+                (vars[loopVarExpr.content] as number)++
               ) {
                 interpreter(loopCode);
               }
             } else {
+              // inside a function => local variable scope
               for (
                 functionStack[functionStack.length - 1].arguments[
                   loopVarExpr.content
                 ] = startValue;
-                functionStack[functionStack.length - 1].arguments[
+                assertIsNumber(
+                  functionStack[functionStack.length - 1].arguments[
+                    loopVarExpr.content
+                  ]
+                ) < limit;
+                (functionStack[functionStack.length - 1].arguments[
                   loopVarExpr.content
-                ] < limit;
-                functionStack[functionStack.length - 1].arguments[
-                  loopVarExpr.content
-                ]++
+                ] as number)++
               ) {
                 interpreter(loopCode);
               }
@@ -184,8 +187,8 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
               // not inside a function
               for (
                 vars[loopVarExpr.content] = startValue;
-                (vars[loopVarExpr.content] as any as number) > limit;
-                (vars[loopVarExpr.content] as any as number) -= 1
+                assertIsNumber(vars[loopVarExpr.content]) > limit;
+                (vars[loopVarExpr.content] as number)--
               ) {
                 interpreter(loopCode);
               }
@@ -194,12 +197,14 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
                 functionStack[functionStack.length - 1].arguments[
                   loopVarExpr.content
                 ] = startValue;
-                functionStack[functionStack.length - 1].arguments[
+                assertIsNumber(
+                  functionStack[functionStack.length - 1].arguments[
+                    loopVarExpr.content
+                  ]
+                ) > limit;
+                (functionStack[functionStack.length - 1].arguments[
                   loopVarExpr.content
-                ] > limit;
-                functionStack[functionStack.length - 1].arguments[
-                  loopVarExpr.content
-                ]--
+                ] as number)--
               ) {
                 interpreter(loopCode);
               }
@@ -221,8 +226,8 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
 
         case '<':
           if (
-            (interpreter([content[0]]) as number) <
-            (interpreter([content[2]]) as number)
+            assertIsNumber(interpreter([content[0]])) <
+            assertIsNumber(interpreter([content[2]]))
           ) {
             return true;
           } else {
@@ -231,8 +236,8 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
 
         case '>':
           if (
-            (interpreter([content[0]]) as number) >
-            (interpreter([content[2]]) as number)
+            assertIsNumber(interpreter([content[0]])) >
+            assertIsNumber(interpreter([content[2]]))
           ) {
             return true;
           } else {
@@ -242,7 +247,7 @@ export function interpreter(expressions: Expression[]): Variable | Variable[] {
     } else if (expr.type === 'BRACKET') {
       return interpreter(expr.content);
     } else if (expr.type === 'FUNCTION') {
-      // store defined function
+      // defines and stores a function
       const content = expr.content;
       const functionname = content[0] + '()';
       const functiondata = content[1];
