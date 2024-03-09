@@ -1,12 +1,12 @@
 import { assertIsNumber, assertIsNumberOrString } from './assertions';
 
-let functions: Record<string, FunctionDescriptor> = {}; // uses seperate from vars because it doesnt have a local scope
-let functionStack: {
+const functions: Record<string, FunctionDescriptor> = {}; // use its own seperate vars (FunctionDescriptor.input) because thats its local scope
+const functionStack: {
   functionName: string;
   arguments: Record<string, any>; // any needs to be replaced with smth. like Variable | Expression[]?
   returnValue: Variable | Variable[];
 }[] = [];
-let vars: Record<string, Variable | Variable[]> = {};
+const vars: Record<string, Variable | Variable[]> = {};
 
 export function interpreter(expressions: Expression[]): Variable | Variable[] {
   let index = 0;
